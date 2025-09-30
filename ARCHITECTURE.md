@@ -5,7 +5,8 @@
 ```
 ┌──────────────────────┐
 │ Flet UI (app/main.py)│
-│  • input controllers  │
+│  • source selectors   │
+│  • dynamic inputs     │
 │  • map bridge         │
 │  • status + logging   │
 └──────────┬───────────┘
@@ -34,9 +35,10 @@
 The CLI (`cli/csv_convert.py`) reuses `core.parser` and `core.transform` for each row.
 
 ## Data Flow
-1. **Input**: The UI or CLI receives raw coordinate text. `core.parser` tokenises and
-   infers CRS/format, returning a structured `ParsedCoordinate` dataclass with
-   numeric values, CRS code, and warnings.
+1. **Input**: The UI builds coordinate strings from the selected source/height controls
+   (e.g., WGS84 lat/lon boxes, RT90 northing/easting, MGRS text) while the CLI accepts
+   raw CSV tokens. `core.parser` tokenises and infers CRS/format, returning a structured
+   `ParsedCoordinate` dataclass with numeric values, CRS code, and warnings.
 2. **Canonical conversion**: `core.transform` converts parsed values into both
    geocentric (EPSG:4978) and geographic (EPSG:4326) canonical caches. All downstream
    conversions start from these caches to minimise precision loss and reduce the
@@ -54,8 +56,8 @@ The CLI (`cli/csv_convert.py`) reuses `core.parser` and `core.transform` for eac
 ## Key Dataclasses
 - `ParsedCoordinate`: holds CRS code, values, format hints, height, and warnings.
 - `CRSInfo`: metadata (EPSG code, axis order, dimension) for each supported CRS.
-- `TransformationResult`: (UI only) bundling canonical caches, warnings, and formatted
-  strings.
+- `CanonicalCoordinate`: geocentric/geographic caches produced by the transform layer.
+- `CoordinateOption` (UI): describes selectable coordinate groups and their field layout.
 
 ## Threading Considerations
 Flet runs in a single-threaded event loop. Potentially slow operations (file IO,

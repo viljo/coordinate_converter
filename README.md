@@ -8,8 +8,8 @@ transformation, SWEN17_RH2000 height support, and a CSV batch CLI.
 > run cross-platform, but packaging/signing is not included.
 
 ## Features
-- Flet desktop UI with format switching, precision controls, and live OpenStreetMap
-  preview via Leaflet.
+- Flet desktop UI with coordinate source/height selectors, precision controls, and a
+  live OpenStreetMap preview via Leaflet.
 - Robust free-text parser for DD, DMS, DDM, RT90 2.5 gon V, MGRS, and geocentric XYZ
   (WGS84 + RR92).
 - Canonical transformation engine using PyProj with cached Transformer pipelines and a
@@ -35,13 +35,16 @@ resources. If the grid is missing a warning banner is shown.
 make run
 ```
 
-Use the format dropdown to select the display format. Free-text input accepts any
-supported representation; ambiguous strings default to SWEREF99 geographic (degrees).
-Height system selection toggles between ellipsoidal, RH2000, and (placeholder) RFN.
+Choose the **Input coordinate source** and **Input height reference** selectors to
+spawn the relevant fields (e.g., WGS84 lat/lon, RT90 northing/easting, XYZ, MGRS).
+After entering values, click **Convert** or press Enter. The **Output coordinate** and
+**Output height system** selectors mirror the same options and render the chosen
+representation only. Geographic outputs can be displayed as DD, DDM, or DMS via the
+format dropdown.
 
-Keyboard shortcuts:
-- **↑/↓**: ±1 in the active field
-- **Shift + ↑/↓**: ±10 in the active field
+Keyboard shortcuts (numeric input fields):
+- **↑/↓**: ±1 in the focused box
+- **Shift + ↑/↓**: ±10 in the focused box
 - **Enter / focus-out**: commit edits and refresh map
 
 ### CSV CLI

@@ -175,6 +175,32 @@ def convert_to_targets(
     """Convert a parsed coordinate into multiple target representations."""
 
     canonical = to_canonical(parsed)
+    lat, lon, ellipsoidal = canonical.geographic
+    height_source = parsed.height
+    if height_source is not None:
+        if parsed.height_system == HeightSystem.RH2000:
+            try:
+                res = height_swen17.ellipsoidal_height(lat, lon, height_source)
+            except height_swen17.GeoidUnavailableError as exc:
+                canonical.warnings.append(str(exc))
+            else:
+                ellipsoidal = res.height
+                canonical.geographic = (lat, lon, ellipsoidal)
+                canonical.xyz = _geodetic_to_ecef(lat, lon, ellipsoidal)
+                parsed.height = ellipsoidal
+        elif parsed.height_system == HeightSystem.RFN:
+            try:
+                ellipsoidal_height = height_rfn.DEFAULT_MODEL.orthometric_to_ellipsoidal(
+                    lat, lon, height_source
+                )
+            except height_rfn.RFNHeightUnavailable as exc:
+                canonical.warnings.append(str(exc))
+            else:  # pragma: no cover - future extension
+                ellipsoidal = float(ellipsoidal_height)
+                canonical.geographic = (lat, lon, ellipsoidal)
+                canonical.xyz = _geodetic_to_ecef(lat, lon, ellipsoidal)
+                parsed.height = ellipsoidal
+
     results: Dict[str, Tuple[float, ...] | str] = {}
 
     for target in targets:
@@ -207,6 +233,8 @@ def convert_to_targets(
             results["HEIGHT_ERROR"] = str(exc)
         else:  # pragma: no cover - future extension
             results["HEIGHT"] = (height,)
+    if canonical.warnings:
+        results["WARNINGS"] = tuple(canonical.warnings)
     return results
 
 

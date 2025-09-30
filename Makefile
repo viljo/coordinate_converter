@@ -10,7 +10,8 @@ run:
 	$(PYTHON) -m app.main
 
 test:
-	$(UV) run pytest -q -k integration || $(PYTHON) -m pytest -q -k integration
+	$(UV) run pytest -q -k integration \
+		|| ( $(UV) pip install -r requirements.txt && $(UV) run pytest -q -k integration )
 
 lint:
 	$(PYTHON) -m ruff check src tests

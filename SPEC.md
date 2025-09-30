@@ -39,10 +39,12 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
   tests mark numerical checks as xfail until constants from LMV report §3.9.3 are added.
 
 ## User Experience Requirements
-1. Desktop UI: left-hand coordinate editors with format switching, right-hand live
-   map preview inside a WebView backed by Leaflet 1.x.
-2. Free-text field accepts any supported format. Ambiguous strings default to
-   SWEREF99 geographic (degrees).
+1. Desktop UI: left-hand coordinate source and height source selectors dynamically
+   create the relevant input boxes (e.g., lat/lon, RT90, XYZ, MGRS) while the right-hand
+   pane hosts the Leaflet 1.x WebView map preview.
+2. Geographic inputs accept DD, DDM, or DMS text per axis; MGRS, RT90, and XYZ fields
+   match their domain structures. Output coordinate selectors mirror the same options
+   and display the requested format only.
 3. Precision controls per axis with keyboard adjustments (↑/↓ ±1, Shift for ×10). All
    conversions happen non-blocking; warnings do not crash the UI.
 4. Status bar summarises datum/CRS, height system, and last warning.
