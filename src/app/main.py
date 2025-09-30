@@ -41,6 +41,7 @@ class CoordinateApp:
         self.page.theme_mode = ft.ThemeMode.SYSTEM
         self.page.window_width = 1200
         self.page.window_height = 800
+        self.page.on_keyboard_event = self._on_page_key
 
         self.format_selector = ft.Dropdown(
             label="Display format",
@@ -71,37 +72,39 @@ class CoordinateApp:
             on_submit=self._on_commit,
             on_blur=self._on_commit,
         )
-        self.status_text = ft.Text(value="Ready", color=ft.colors.ON_SURFACE_VARIANT)
-        self.warning_text = ft.Text(value="", color=ft.colors.AMBER)
-        self.formatted_text = ft.Text(value="", color=ft.colors.PRIMARY)
+        self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
+        self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
+        self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
 
         self.wgs_lat_field = NumericField(
             ft.TextField(
                 label="Latitude (°)",
-                on_blur=self._on_wgs_commit,
+                on_blur=self._on_wgs_blur,
                 on_submit=self._on_wgs_commit,
-                on_key_down=lambda e: self._on_wgs_key(e, "lat"),
+                on_focus=lambda _e, axis="lat": self._on_wgs_focus(axis),
             ),
             6,
         )
         self.wgs_lon_field = NumericField(
             ft.TextField(
                 label="Longitude (°)",
-                on_blur=self._on_wgs_commit,
+                on_blur=self._on_wgs_blur,
                 on_submit=self._on_wgs_commit,
-                on_key_down=lambda e: self._on_wgs_key(e, "lon"),
+                on_focus=lambda _e, axis="lon": self._on_wgs_focus(axis),
             ),
             6,
         )
         self.wgs_h_field = NumericField(
             ft.TextField(
                 label="Ellipsoidal height (m)",
-                on_blur=self._on_wgs_commit,
+                on_blur=self._on_wgs_blur,
                 on_submit=self._on_wgs_commit,
-                on_key_down=lambda e: self._on_wgs_key(e, "h"),
+                on_focus=lambda _e, axis="h": self._on_wgs_focus(axis),
             ),
             3,
         )
+
+        self.focused_axis: Optional[str] = None
 
         self.output_fields: Dict[str, List[ft.TextField]] = {}
         for target in APP_TARGETS:
@@ -294,6 +297,13 @@ class CoordinateApp:
         self._update_map(lat, lon)
         self.page.update()
 
+    def _on_wgs_focus(self, axis: str) -> None:
+        self.focused_axis = axis
+
+    def _on_wgs_blur(self, event) -> None:
+        self.focused_axis = None
+        self._on_wgs_commit(event)
+
     def _on_wgs_commit(self, _event) -> None:
         try:
             lat = float(self.wgs_lat_field.field.value)
@@ -312,13 +322,7 @@ class CoordinateApp:
         self.coordinate_input.value = f"{lat:.6f} {lon:.6f} {h:.3f}"
         self._run_conversion(parsed)
 
-    def _on_wgs_key(self, event: ft.KeyboardEvent, axis: str) -> None:
-        if event.key not in ("ArrowUp", "ArrowDown"):
-            return
-        step = 1.0
-        if event.shift:
-            step *= 10
-        direction = 1 if event.key == "ArrowUp" else -1
+    def _nudge_wgs_axis(self, axis: str, delta: float) -> None:
         field = {
             "lat": self.wgs_lat_field,
             "lon": self.wgs_lon_field,
@@ -328,8 +332,19 @@ class CoordinateApp:
             current = float(field.field.value or 0.0)
         except ValueError:
             current = 0.0
-        field.set_value(current + direction * step)
+        field.set_value(current + delta)
         self._on_wgs_commit(None)
+
+    def _on_page_key(self, event: ft.KeyboardEvent) -> None:
+        if self.focused_axis not in {"lat", "lon", "h"}:
+            return
+        if event.key not in ("ArrowUp", "ArrowDown"):
+            return
+        step = 1.0
+        if event.shift:
+            step *= 10
+        direction = 1 if event.key == "ArrowUp" else -1
+        self._nudge_wgs_axis(self.focused_axis, direction * step)
 
 
 def main(page: ft.Page) -> None:
