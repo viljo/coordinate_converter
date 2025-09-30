@@ -10,7 +10,7 @@ run:
 	$(PYTHON) -m app.main
 
 test:
-	$(PYTHON) -m pytest -q
+	$(UV) run pytest -q -k integration || $(PYTHON) -m pytest -q -k integration
 
 lint:
 	$(PYTHON) -m ruff check src tests
