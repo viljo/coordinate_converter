@@ -19,12 +19,12 @@ transformation, SWEN17_RH2000 height support, and a CSV batch CLI.
 
 ## Quick Start
 ```bash
-./scripts/start_app.sh
+./start_app.sh
 ```
 
-The helper script creates (or reuses) a local `.venv`, installs dependencies, and
-launches the desktop UI. Pass additional arguments to forward them to the
-application entry point.
+The helper script creates (or reuses) a local `.venv`, installs dependencies via
+[`uv`](https://docs.astral.sh/uv/), and launches the desktop UI. Pass additional
+arguments to forward them to the application entry point.
 
 The first run downloads the SWEN17 geoid grid if PROJ is configured to fetch remote
 resources. If the grid is missing a warning banner is shown.

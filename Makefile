@@ -1,19 +1,19 @@
 PYTHON ?= python3
+UV ?= uv
 
 .PHONY: install run test lint fmt
 
 install:
-$(PYTHON) -m pip install --upgrade pip
-$(PYTHON) -m pip install -e .[dev]
+	$(UV) pip install --python "$(shell $(PYTHON) -c 'import sys; print(sys.executable)')" -e '.[dev]'
 
 run:
-$(PYTHON) -m app.main
+	$(PYTHON) -m app.main
 
 test:
-$(PYTHON) -m pytest -q
+	$(PYTHON) -m pytest -q
 
 lint:
-$(PYTHON) -m ruff check src tests
+	$(PYTHON) -m ruff check src tests
 
 fmt:
-$(PYTHON) -m black src tests
+	$(PYTHON) -m black src tests

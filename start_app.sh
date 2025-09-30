@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determine project root relative to this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROJECT_ROOT="${SCRIPT_DIR}"
 cd "${PROJECT_ROOT}"
 
 PYTHON_BIN="${PYTHON:-python3}"
+UV_BIN="${UV:-uv}"
 
 if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   echo "Error: Python executable '$PYTHON_BIN' not found. Set PYTHON env variable." >&2
+  exit 1
+fi
+
+if ! command -v "$UV_BIN" >/dev/null 2>&1; then
+  cat >&2 <<'MSG'
+Error: The 'uv' package manager is required but was not found on PATH.
+Install it from https://docs.astral.sh/uv/getting-started/ and re-run this script.
+MSG
   exit 1
 fi
 
@@ -25,19 +33,20 @@ if [[ "$MAJOR" -lt "$REQUIRED_MAJOR" ]] || { [[ "$MAJOR" -eq "$REQUIRED_MAJOR" ]
 fi
 
 VENV_DIR="${PROJECT_ROOT}/.venv"
+PYTHON_IN_VENV="${VENV_DIR}/bin/python"
+
 if [[ ! -d "$VENV_DIR" ]]; then
-  echo "Creating virtual environment in $VENV_DIR"
-  "$PYTHON_BIN" -m venv "$VENV_DIR"
+  echo "Creating virtual environment in $VENV_DIR using uv"
+  "$UV_BIN" venv --python "$PYTHON_BIN" "$VENV_DIR"
 fi
 
-# shellcheck disable=SC1090
-source "$VENV_DIR/bin/activate"
+if [[ ! -x "$PYTHON_IN_VENV" ]]; then
+  echo "Error: expected Python executable at $PYTHON_IN_VENV after uv venv" >&2
+  exit 1
+fi
 
-PYTHON_BIN="$VENV_DIR/bin/python"
-
-echo "Upgrading pip and installing project dependencies..."
-"$PYTHON_BIN" -m pip install --upgrade pip
-"$PYTHON_BIN" -m pip install -e '.[dev]'
+echo "Installing project dependencies with uv pip..."
+"$UV_BIN" pip install --python "$PYTHON_IN_VENV" -e '.[dev]'
 
 echo "Starting the Flet coordinate converter app..."
-exec "$PYTHON_BIN" -m app.main "$@"
+exec "$PYTHON_IN_VENV" -m app.main "$@"
