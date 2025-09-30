@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 authors = [{ name = "Coordinate Converter Contributors" }]
 dependencies = [
     "flet==0.27.6",
-    "pyproj==3.6.1",
+    "pyproj==3.7.0",
     "numpy==1.26.4",
     "mgrs==1.4.5",
 ]
