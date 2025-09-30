@@ -30,6 +30,7 @@ class FieldSpec:
     label: str
     decimals: int = 3
     is_angle: bool = False
+    format_mode: Optional[str] = None
 
 
 @dataclass
@@ -37,52 +38,119 @@ class CoordinateOption:
     key: str
     label: str
     fields: List[FieldSpec]
-    crs: CRSCode | None
     source_format: str
+    result_key: str
+    crs: CRSCode | None = None
     parse_hint: Optional[str] = None
     default_crs: CRSCode = CRSCode.WGS84_GEO
     separate_height: bool = False
+    allow_input: bool = True
+    allow_output: bool = True
 
 
-COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {
-    CRSCode.WGS84_GEO.value: CoordinateOption(
-        key=CRSCode.WGS84_GEO.value,
-        label="WGS84 geographic",
+COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
+    CoordinateOption(
+        key="FREE_TEXT",
+        label="Free-text parser",
+        fields=[FieldSpec("text", "Coordinate text (auto-detect)", decimals=0)],
+        source_format="FREE_TEXT",
+        result_key=CRSCode.WGS84_GEO.value,
+        crs=None,
+        default_crs=CRSCode.SWEREF99_GEO,
+        separate_height=False,
+        allow_output=False,
+    ),
+    CoordinateOption(
+        key="WGS84_GEO_DD",
+        label="WGS84 geographic (DD)",
         fields=[
-            FieldSpec("lat", "Latitude", decimals=6, is_angle=True),
-            FieldSpec("lon", "Longitude", decimals=6, is_angle=True),
+            FieldSpec("lat", "Latitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lon", "Longitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
         ],
-        crs=CRSCode.WGS84_GEO,
         source_format="DD",
-        parse_hint="WGS84",
+        result_key=CRSCode.WGS84_GEO.value,
+        crs=CRSCode.WGS84_GEO,
         default_crs=CRSCode.WGS84_GEO,
         separate_height=True,
     ),
-    CRSCode.SWEREF99_GEO.value: CoordinateOption(
-        key=CRSCode.SWEREF99_GEO.value,
-        label="SWEREF99 geographic",
+    CoordinateOption(
+        key="WGS84_GEO_DDM",
+        label="WGS84 geographic (DDM)",
         fields=[
-            FieldSpec("lat", "Latitude", decimals=6, is_angle=True),
-            FieldSpec("lon", "Longitude", decimals=6, is_angle=True),
+            FieldSpec("lat", "Latitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon", "Longitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
         ],
-        crs=CRSCode.SWEREF99_GEO,
+        source_format="DDM",
+        result_key=CRSCode.WGS84_GEO.value,
+        crs=CRSCode.WGS84_GEO,
+        default_crs=CRSCode.WGS84_GEO,
+        separate_height=True,
+    ),
+    CoordinateOption(
+        key="WGS84_GEO_DMS",
+        label="WGS84 geographic (DMS)",
+        fields=[
+            FieldSpec("lat", "Latitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon", "Longitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
+        ],
+        source_format="DMS",
+        result_key=CRSCode.WGS84_GEO.value,
+        crs=CRSCode.WGS84_GEO,
+        default_crs=CRSCode.WGS84_GEO,
+        separate_height=True,
+    ),
+    CoordinateOption(
+        key="SWEREF99_GEO_DD",
+        label="SWEREF99 geographic (DD)",
+        fields=[
+            FieldSpec("lat", "Latitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lon", "Longitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
+        ],
         source_format="DD",
-        parse_hint="SWEREF99",
+        result_key=CRSCode.SWEREF99_GEO.value,
+        crs=CRSCode.SWEREF99_GEO,
         default_crs=CRSCode.SWEREF99_GEO,
         separate_height=True,
     ),
-    CRSCode.RT90_3021.value: CoordinateOption(
+    CoordinateOption(
+        key="SWEREF99_GEO_DDM",
+        label="SWEREF99 geographic (DDM)",
+        fields=[
+            FieldSpec("lat", "Latitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon", "Longitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
+        ],
+        source_format="DDM",
+        result_key=CRSCode.SWEREF99_GEO.value,
+        crs=CRSCode.SWEREF99_GEO,
+        default_crs=CRSCode.SWEREF99_GEO,
+        separate_height=True,
+    ),
+    CoordinateOption(
+        key="SWEREF99_GEO_DMS",
+        label="SWEREF99 geographic (DMS)",
+        fields=[
+            FieldSpec("lat", "Latitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon", "Longitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
+        ],
+        source_format="DMS",
+        result_key=CRSCode.SWEREF99_GEO.value,
+        crs=CRSCode.SWEREF99_GEO,
+        default_crs=CRSCode.SWEREF99_GEO,
+        separate_height=True,
+    ),
+    CoordinateOption(
         key=CRSCode.RT90_3021.value,
         label="RT90 2.5 gon V",
         fields=[
             FieldSpec("northing", "Northing (m)", decimals=3),
             FieldSpec("easting", "Easting (m)", decimals=3),
         ],
-        crs=CRSCode.RT90_3021,
         source_format="RT90",
+        result_key=CRSCode.RT90_3021.value,
+        crs=CRSCode.RT90_3021,
         default_crs=CRSCode.RT90_3021,
     ),
-    CRSCode.WGS84_XYZ.value: CoordinateOption(
+    CoordinateOption(
         key=CRSCode.WGS84_XYZ.value,
         label="WGS84 geocentric XYZ",
         fields=[
@@ -90,11 +158,13 @@ COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {
             FieldSpec("y", "Y (m)", decimals=3),
             FieldSpec("z", "Z (m)", decimals=3),
         ],
-        crs=CRSCode.WGS84_XYZ,
         source_format="XYZ",
+        result_key=CRSCode.WGS84_XYZ.value,
+        crs=CRSCode.WGS84_XYZ,
         default_crs=CRSCode.WGS84_XYZ,
+        separate_height=False,
     ),
-    CRSCode.RR92_XYZ.value: CoordinateOption(
+    CoordinateOption(
         key=CRSCode.RR92_XYZ.value,
         label="RR92 geocentric XYZ",
         fields=[
@@ -102,20 +172,25 @@ COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {
             FieldSpec("y", "Y (m)", decimals=3),
             FieldSpec("z", "Z (m)", decimals=3),
         ],
-        crs=CRSCode.RR92_XYZ,
         source_format="RR92_XYZ",
+        result_key=CRSCode.RR92_XYZ.value,
+        crs=CRSCode.RR92_XYZ,
         default_crs=CRSCode.RR92_XYZ,
+        separate_height=False,
     ),
-    "MGRS": CoordinateOption(
+    CoordinateOption(
         key="MGRS",
         label="MGRS (WGS84 grid)",
         fields=[FieldSpec("mgrs", "MGRS", decimals=0)],
-        crs=None,
         source_format="MGRS",
-        parse_hint=None,
+        result_key="MGRS",
+        crs=None,
         default_crs=CRSCode.WGS84_GEO,
+        separate_height=False,
     ),
-}
+]
+
+COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {option.key: option for option in COORDINATE_OPTIONS_LIST}
 
 HEIGHT_LABELS = {
     HeightSystem.ELLIPSOIDAL: "Ellipsoidal height (m)",
@@ -135,8 +210,12 @@ class CoordinateApp:
         self.page.on_keyboard_event = self._on_page_key
         self.input_coord_selector = ft.Dropdown(
             label="Input coordinate source",
-            options=[ft.dropdown.Option(option.key, option.label) for option in COORDINATE_OPTIONS.values()],
-            value=CRSCode.WGS84_GEO.value,
+            options=[
+                ft.dropdown.Option(option.key, option.label)
+                for option in COORDINATE_OPTIONS_LIST
+                if option.allow_input
+            ],
+            value="WGS84_GEO_DD",
             on_change=self._on_input_type_change,
         )
         self.input_height_selector = ft.Dropdown(
@@ -151,8 +230,12 @@ class CoordinateApp:
         )
         self.output_coord_selector = ft.Dropdown(
             label="Output coordinate",
-            options=[ft.dropdown.Option(option.key, option.label) for option in COORDINATE_OPTIONS.values()],
-            value=CRSCode.WGS84_GEO.value,
+            options=[
+                ft.dropdown.Option(option.key, option.label)
+                for option in COORDINATE_OPTIONS_LIST
+                if option.allow_output
+            ],
+            value="WGS84_GEO_DD",
             on_change=self._on_output_type_change,
         )
         self.output_height_selector = ft.Dropdown(
@@ -165,17 +248,6 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_output_height_change,
         )
-        self.output_angle_selector = ft.Dropdown(
-            label="Geographic display format",
-            options=[
-                ft.dropdown.Option("DD"),
-                ft.dropdown.Option("DDM"),
-                ft.dropdown.Option("DMS"),
-            ],
-            value="DD",
-            on_change=self._on_output_format_change,
-        )
-
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
@@ -187,10 +259,12 @@ class CoordinateApp:
         self.output_fields: Dict[str, ft.TextField] = {}
         self.output_fields_container = ft.Column(spacing=8)
 
-        self.convert_button = ft.FilledButton("Convert", on_click=self._on_convert)
+        self._suspend_input_events = False
 
-        self.height_field = ft.TextField(label="Height result", read_only=True)
-        self.height_info_field = ft.TextField(label="Height info", read_only=True)
+        self.current_parsed: Optional[ParsedCoordinate] = None
+        self.current_results: Dict[str, List[float] | Tuple[float, ...] | str] = {}
+        self.focused_field: Optional[str] = None
+        self.focused_field_spec: Optional[FieldSpec] = None
 
         self._rebuild_input_fields()
         self._rebuild_output_fields()
@@ -209,16 +283,11 @@ class CoordinateApp:
                 self.input_coord_selector,
                 self.input_height_selector,
                 self.input_fields_container,
-                self.convert_button,
                 ft.Divider(),
                 ft.Text("Output", style=ft.TextThemeStyle.TITLE_SMALL),
                 self.output_coord_selector,
                 self.output_height_selector,
-                self.output_angle_selector,
                 self.output_fields_container,
-                ft.Divider(),
-                self.height_field,
-                self.height_info_field,
                 ft.Divider(),
                 self.status_text,
                 self.warning_text,
@@ -239,43 +308,84 @@ class CoordinateApp:
             )
         )
 
-        self.current_parsed: Optional[ParsedCoordinate] = None
-        self.current_results: Dict[str, List[float] | Tuple[float, ...] | str] = {}
-        self.focused_field: Optional[str] = None
-        self.focused_field_spec: Optional[FieldSpec] = None
-
     def _rebuild_input_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
+        self.input_height_selector.visible = option.separate_height
         self.input_fields.clear()
         controls: List[ft.Control] = []
+        self._suspend_input_events = True
         for index, spec in enumerate(option.fields):
             field = ft.TextField(
                 label=spec.label,
                 autofocus=index == 0,
-                multiline=spec.name == "mgrs",
-                on_submit=self._on_convert,
+                multiline=spec.name in {"mgrs", "text"},
             )
             if spec.name != "mgrs":
                 field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
                 field.on_blur = self._on_input_blur
+            field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
             self.input_fields[spec.name] = field
             controls.append(field)
         if option.separate_height:
             label = HEIGHT_LABELS.get(self.input_height_selector.value, "Height (m)")
             self.input_height_field = ft.TextField(
                 label=label,
-                on_submit=self._on_convert,
             )
             height_spec = FieldSpec("height", label, decimals=3)
             self.input_height_field.on_focus = lambda _e, s=height_spec: self._on_input_focus(s)
             self.input_height_field.on_blur = self._on_input_blur
+            self.input_height_field.on_change = lambda _e: self._on_input_change("height")
             controls.append(self.input_height_field)
         else:
             self.input_height_field = None
+        self._suspend_input_events = False
         self.input_fields_container.controls = controls
         self.focused_field = None
         self.focused_field_spec = None
+        self._populate_input_from_results(option)
         self.page.update()
+
+    def _populate_input_from_results(self, option: CoordinateOption) -> None:
+        if not self.current_results:
+            return
+        values = self.current_results.get(option.result_key)
+        if not values:
+            if option.key == "MGRS" and "MGRS" in self.current_results:
+                self._suspend_input_events = True
+                try:
+                    field = self.input_fields.get("mgrs")
+                    if field is not None:
+                        field.value = str(self.current_results.get("MGRS") or "")
+                finally:
+                    self._suspend_input_events = False
+            return
+        if not isinstance(values, (list, tuple)):
+            return
+        self._suspend_input_events = True
+        try:
+            for index, spec in enumerate(option.fields):
+                field = self.input_fields.get(spec.name)
+                if field is None:
+                    continue
+                if index >= len(values):
+                    field.value = ""
+                    continue
+                value = float(values[index])
+                if spec.is_angle and spec.format_mode == "DDM":
+                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
+                    field.value = self._deg_to_ddm(value, positive, negative)
+                elif spec.is_angle and spec.format_mode == "DMS":
+                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
+                    field.value = self._deg_to_dms(value, positive, negative)
+                else:
+                    decimals = spec.decimals if not spec.is_angle else 6
+                    field.value = f"{value:.{decimals}f}"
+            if option.separate_height and self.input_height_field is not None:
+                height_values = self.current_results.get("HEIGHT")
+                if isinstance(height_values, (list, tuple)) and height_values:
+                    self.input_height_field.value = f"{float(height_values[0]):.3f}"
+        finally:
+            self._suspend_input_events = False
 
     def _rebuild_output_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.output_coord_selector.value]
@@ -286,11 +396,7 @@ class CoordinateApp:
             self.output_fields[spec.name] = field
             controls.append(field)
         self.output_fields_container.controls = controls
-        self.output_angle_selector.visible = option.crs in {
-            CRSCode.WGS84_GEO,
-            CRSCode.SWEREF99_GEO,
-        }
-        self.height_field.label = HEIGHT_LABELS.get(self.output_height_selector.value, "Height result")
+        self.output_height_selector.visible = option.separate_height
         self.page.update()
 
     def _map_url(self) -> str:
@@ -313,13 +419,25 @@ class CoordinateApp:
             return
         self.map_view.eval_js(f"updateMapCenter({lat}, {lon});")
 
-    def _format_latlon(self, lat: float, lon: float) -> str:
-        fmt = self.output_angle_selector.value
+    def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
             return f"{self._deg_to_ddm(lat, 'N', 'S')} / {self._deg_to_ddm(lon, 'E', 'W')}"
         if fmt == "DMS":
             return f"{self._deg_to_dms(lat, 'N', 'S')} / {self._deg_to_dms(lon, 'E', 'W')}"
         return f"{lat:.6f}, {lon:.6f}"
+
+    def _height_summary(self) -> str:
+        if "HEIGHT_ERROR" in self.current_results:
+            return str(self.current_results["HEIGHT_ERROR"])
+        if "HEIGHT" in self.current_results:
+            height_value = float(self.current_results["HEIGHT"][0])
+            label = HEIGHT_LABELS.get(self.output_height_selector.value, "Height")
+            summary = f"{label}: {height_value:.3f} m"
+            if "HEIGHT_INFO" in self.current_results:
+                separation = float(self.current_results["HEIGHT_INFO"][0])
+                summary += f" (Geoid sep: {separation:.3f} m)"
+            return summary
+        return ""
 
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
@@ -341,6 +459,8 @@ class CoordinateApp:
 
     def _on_input_type_change(self, _event) -> None:
         self._rebuild_input_fields()
+        if self._inputs_complete():
+            self._on_convert(None)
 
     def _on_input_height_change(self, _event) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
@@ -349,20 +469,21 @@ class CoordinateApp:
                 self.input_height_selector.value, "Height (m)"
             )
         self.page.update()
+        if self._inputs_complete():
+            self._on_convert(None)
 
     def _on_output_type_change(self, _event) -> None:
         self._rebuild_output_fields()
-        self._update_output_fields()
-
-    def _on_output_height_change(self, _event) -> None:
-        self.height_field.label = HEIGHT_LABELS.get(
-            self.output_height_selector.value, "Height result"
-        )
         if self.current_parsed:
             self._run_conversion(self.current_parsed)
+        else:
+            self._update_output_fields()
 
-    def _on_output_format_change(self, _event) -> None:
-        self._update_output_fields()
+    def _on_output_height_change(self, _event) -> None:
+        if self.current_parsed:
+            self._run_conversion(self.current_parsed)
+        else:
+            self._update_output_fields()
 
     def _on_input_focus(self, spec: FieldSpec) -> None:
         self.focused_field = spec.name
@@ -371,6 +492,27 @@ class CoordinateApp:
     def _on_input_blur(self, _event) -> None:
         self.focused_field = None
         self.focused_field_spec = None
+
+    def _inputs_complete(self) -> bool:
+        option = COORDINATE_OPTIONS[self.input_coord_selector.value]
+        if option.source_format == "FREE_TEXT":
+            field = self.input_fields.get("text")
+            return bool(field and field.value.strip())
+        if option.source_format == "MGRS":
+            field = self.input_fields.get("mgrs")
+            return bool(field and field.value.strip())
+        for spec in option.fields:
+            field = self.input_fields.get(spec.name)
+            if field is None or not field.value.strip():
+                return False
+        return True
+
+    def _on_input_change(self, _field_name: Optional[str] = None) -> None:
+        if self._suspend_input_events:
+            return
+        if not self._inputs_complete():
+            return
+        self._on_convert(None)
 
     def _on_convert(self, _event) -> None:
         try:
@@ -385,7 +527,12 @@ class CoordinateApp:
 
     def _parse_input_fields(self) -> ParsedCoordinate:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
-        if option.key == "MGRS":
+        if option.source_format == "FREE_TEXT":
+            value = self.input_fields["text"].value.strip()
+            if not value:
+                raise ParseError("Enter a coordinate")
+            parsed = core_parser.parse(value, default_crs=option.default_crs)
+        elif option.source_format == "MGRS":
             value = self.input_fields["mgrs"].value.strip()
             if not value:
                 raise ParseError("Enter an MGRS coordinate")
@@ -395,7 +542,7 @@ class CoordinateApp:
             lon_text = self.input_fields["lon"].value.strip()
             if not lat_text or not lon_text:
                 raise ParseError("Latitude and longitude are required")
-            composed = f"{option.parse_hint or ''} {lat_text} {lon_text}".strip()
+            composed = f"{lat_text} {lon_text}".strip()
             height_text = None
             if option.separate_height and self.input_height_field is not None:
                 height_text = self.input_height_field.value.strip()
@@ -431,9 +578,12 @@ class CoordinateApp:
         self.current_parsed = parsed
         targets: List[str | CRSCode] = [code.value for code in APP_TARGETS]
         selected_output = self.output_coord_selector.value
-        if selected_output not in targets:
-            targets.append(selected_output)
-        targets.append("MGRS")
+        selected_option = COORDINATE_OPTIONS[selected_output]
+        selected_target = selected_option.result_key
+        if selected_target not in targets:
+            targets.append(selected_target)
+        if "MGRS" not in targets:
+            targets.append("MGRS")
         try:
             results = convert_to_targets(
                 parsed,
@@ -458,19 +608,24 @@ class CoordinateApp:
         if "WARNINGS" in results:
             warnings.extend(results["WARNINGS"])
         self.warning_text.value = "; ".join(warnings)
-        display_values = self.current_results.get(selected_output)
+        display_values = self.current_results.get(selected_option.result_key)
+        formatted_parts: List[str] = []
         if (
-            selected_output in {CRSCode.WGS84_GEO.value, CRSCode.SWEREF99_GEO.value}
+            selected_option.result_key
+            in {CRSCode.WGS84_GEO.value, CRSCode.SWEREF99_GEO.value}
             and isinstance(display_values, (tuple, list))
             and len(display_values) >= 2
         ):
             lat_val = float(display_values[0])
             lon_val = float(display_values[1])
-            self.formatted_text.value = self._format_latlon(lat_val, lon_val)
+            format_mode = selected_option.fields[0].format_mode or "DD"
+            formatted_parts.append(self._format_latlon(lat_val, lon_val, format_mode))
         elif selected_output == "MGRS" and "MGRS" in results:
-            self.formatted_text.value = str(results["MGRS"])
-        else:
-            self.formatted_text.value = ""
+            formatted_parts.append(str(results["MGRS"]))
+        height_summary = self._height_summary()
+        if height_summary:
+            formatted_parts.append(height_summary)
+        self.formatted_text.value = " | ".join(part for part in formatted_parts if part)
         self._update_map(lat, lon)
         self.page.update()
 
@@ -500,7 +655,7 @@ class CoordinateApp:
 
     def _update_output_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.output_coord_selector.value]
-        values = self.current_results.get(option.key)
+        values = self.current_results.get(option.result_key)
         if isinstance(values, tuple):
             values_seq: Tuple[float, ...] = tuple(float(v) for v in values)
         elif isinstance(values, list):
@@ -512,8 +667,16 @@ class CoordinateApp:
             if not field:
                 continue
             if values_seq and index < len(values_seq):
-                decimals = spec.decimals if not spec.is_angle else 6
-                field.value = f"{values_seq[index]:.{decimals}f}"
+                value = values_seq[index]
+                if spec.is_angle and spec.format_mode == "DDM":
+                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
+                    field.value = self._deg_to_ddm(value, positive, negative)
+                elif spec.is_angle and spec.format_mode == "DMS":
+                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
+                    field.value = self._deg_to_dms(value, positive, negative)
+                else:
+                    decimals = spec.decimals if not spec.is_angle else 6
+                    field.value = f"{value:.{decimals}f}"
             else:
                 field.value = ""
         if option.key == "MGRS":
@@ -521,19 +684,7 @@ class CoordinateApp:
             field = self.output_fields.get("mgrs")
             if field is not None:
                 field.value = str(mgrs_value or "")
-        if "HEIGHT" in self.current_results:
-            height_value = self.current_results["HEIGHT"][0]
-            self.height_field.value = f"{float(height_value):.3f}"
-        else:
-            self.height_field.value = ""
-        if "HEIGHT_INFO" in self.current_results:
-            separation = self.current_results["HEIGHT_INFO"][0]
-            self.height_info_field.value = f"Geoid sep: {float(separation):.3f} m"
-        elif "HEIGHT_ERROR" in self.current_results:
-            self.height_field.value = ""
-            self.height_info_field.value = str(self.current_results["HEIGHT_ERROR"])
-        else:
-            self.height_info_field.value = ""
+        self.page.update()
 
 
 def main(page: ft.Page) -> None:
