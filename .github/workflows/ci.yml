@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  integration-tests:
+    name: Integration tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('pyproject.toml', 'uv.lock', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-
+            ${{ runner.os }}-
+
+      - name: Install uv
+        shell: bash
+        run: |
+          if ! command -v uv >/dev/null 2>&1; then
+            curl -Ls https://astral.sh/uv/install.sh | sh
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -e
+          if command -v uv >/dev/null 2>&1; then
+            uv sync --all-extras || pip install -r requirements.txt
+          else
+            pip install -r requirements.txt
+          fi
+
+      - name: Install nats-server
+        shell: bash
+        run: |
+          set -e
+          NATS_VERSION="2.10.16"
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            brew update
+            brew install nats-server
+          else
+            curl -L "https://github.com/nats-io/nats-server/releases/download/v${NATS_VERSION}/nats-server-v${NATS_VERSION}-linux-amd64.tar.gz" -o nats-server.tar.gz
+            tar -xzf nats-server.tar.gz
+            sudo mv "nats-server-v${NATS_VERSION}-linux-amd64/nats-server" /usr/local/bin/nats-server
+            rm -rf nats-server.tar.gz "nats-server-v${NATS_VERSION}-linux-amd64"
+          fi
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          if [[ -f .venv/bin/activate ]]; then
+            source .venv/bin/activate
+          fi
+          python -m pytest -q -k integration --maxfail=1 --disable-warnings
+
+      - name: Check for test artifacts
+        if: failure()
+        id: artifacts
+        shell: bash
+        run: |
+          if compgen -G "tests/.artifacts/**" > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload test artifacts
+        if: failure() && steps.artifacts.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-artifacts-${{ matrix.os }}
+          path: tests/.artifacts
+          if-no-files-found: ignore
