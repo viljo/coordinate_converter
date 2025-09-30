@@ -48,5 +48,16 @@ fi
 echo "Installing project dependencies with uv pip..."
 "$UV_BIN" pip install --python "$PYTHON_IN_VENV" -e '.[dev]'
 
+# Ensure pip is available inside the environment for Flet's runtime helpers.
+if ! "$PYTHON_IN_VENV" -m pip --version >/dev/null 2>&1; then
+  echo "Bootstrapping pip in the virtual environment via ensurepip..."
+  "$PYTHON_IN_VENV" -m ensurepip --upgrade
+fi
+
+if ! "$PYTHON_IN_VENV" -m pip --version >/dev/null 2>&1; then
+  echo "Error: pip is still unavailable in the virtual environment after ensurepip." >&2
+  exit 1
+fi
+
 echo "Starting the Flet coordinate converter app..."
 exec "$PYTHON_IN_VENV" -m app.main "$@"
