@@ -146,7 +146,7 @@ class CoordinateApp:
         self.map_view = ft.WebView(
             url=map_url,
             expand=True,
-            on_page_finished=lambda _: self._mark_map_ready(),
+            on_page_ended=self._handle_map_page_event,
         )
 
         controls_column = ft.Column(
@@ -192,7 +192,9 @@ class CoordinateApp:
             return f"{html_path.as_uri()}?tile={urllib.parse.quote(tile_url)}"
         return html_path.as_uri()
 
-    def _mark_map_ready(self) -> None:
+    def _handle_map_page_event(self, _event) -> None:
+        """Mark the embedded map as ready once its initial load completes."""
+
         self.map_ready = True
         if self.current_results.get("WGS84_GEO"):
             lat, lon, *_ = self.current_results["WGS84_GEO"]
