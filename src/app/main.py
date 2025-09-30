@@ -286,12 +286,15 @@ class CoordinateApp:
 
         map_url = self._map_url()
         self.map_ready = False
-        self.map_view = ft.WebView(
-            url=map_url,
-            expand=True,
-            javascript_mode=ft.JavascriptMode.UNRESTRICTED,
-            on_page_ended=self._handle_map_page_event,
-        )
+        webview_kwargs: Dict[str, object] = {
+            "url": map_url,
+            "expand": True,
+            "on_page_ended": self._handle_map_page_event,
+        }
+        javascript_mode = getattr(ft, "JavascriptMode", None)
+        if javascript_mode is not None:
+            webview_kwargs["javascript_mode"] = javascript_mode.UNRESTRICTED
+        self.map_view = ft.WebView(**webview_kwargs)
 
         controls_column = ft.Column(
             [
