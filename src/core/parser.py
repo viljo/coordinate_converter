@@ -6,7 +6,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Iterable, Optional, Sequence, Tuple
 
-from mgrs import MGRS
+try:  # pragma: no cover - dependency availability varies
+    from mgrs import MGRS  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback path
+    MGRS = None
 
 from .crs_registry import CRSCode
 
@@ -25,7 +28,7 @@ class ParsedCoordinate:
     warnings: list[str] = field(default_factory=list)
 
 
-_MGRS = MGRS()
+_MGRS = MGRS() if MGRS is not None else None
 _COORD_PATTERN = re.compile(
     r"""
     (?P<coord>
@@ -130,6 +133,11 @@ def parse(text: str, default_crs: CRSCode = CRSCode.SWEREF99_GEO) -> ParsedCoord
 
     mgrs_candidate = re.sub(r"\s+", "", raw)
     if re.fullmatch(r"\d{1,2}[C-HJ-NP-X][A-Z]{2}\d{2,10}", mgrs_candidate.upper()):
+        if _MGRS is None:
+            raise ParseError(
+                "MGRS parsing requires the optional 'mgrs' dependency. "
+                "Install coordinate-converter with the full extras to enable this"
+            )
         try:
             lat, lon = _MGRS.toLatLon(mgrs_candidate)
         except Exception as exc:  # pragma: no cover - library specific

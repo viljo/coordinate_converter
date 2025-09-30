@@ -21,7 +21,7 @@
 ┌──────────────────────┐        ┌─────────────────────┐
 │ core.transform       │        │ core.helmert_rr92   │
 │  • canonical routing │        │  • 7-param Helmert  │
-│  • height dispatch   │        │  • numpy matrices   │
+│  • height dispatch   │        │  • trig helpers     │
 └──────────┬───────────┘        └──────────┬──────────┘
            │                                │
            ▼                                ▼

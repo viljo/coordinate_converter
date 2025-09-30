@@ -67,7 +67,7 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 ## External Dependencies
 - `flet` for GUI shell.
 - `pyproj` for CRS definitions and transformations.
-- `numpy` for Helmert matrix operations.
+- Pure-Python trig (standard library) for Helmert matrix operations (no NumPy runtime dependency).
 - `mgrs` to decode/encode Military Grid Reference System positions.
 - `pytest` for testing; `pytest-cov` optional but recommended.
 

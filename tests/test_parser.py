@@ -2,8 +2,6 @@ import math
 
 import pytest
 
-from mgrs import MGRS
-
 from core import parser
 from core.crs_registry import CRSCode
 
@@ -26,6 +24,8 @@ def test_parse_dms_with_height():
 
 
 def test_parse_mgrs():
+    mgrs_module = pytest.importorskip("mgrs")
+    MGRS = mgrs_module.MGRS
     mgrs_string = MGRS().toMGRS(59.3293, 18.0686, MGRSPrecision=5)
     parsed = parser.parse(mgrs_string)
     assert parsed.source_format == "MGRS"
