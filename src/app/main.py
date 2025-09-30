@@ -479,7 +479,8 @@ class CoordinateApp:
             else:
                 self.output_height_field.value = ""
         self.output_height_field.helper_text = helper
-        self.output_height_field.update()
+        if self.output_height_field.page is not None:
+            self.output_height_field.update()
 
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
