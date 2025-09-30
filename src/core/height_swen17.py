@@ -6,8 +6,14 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Tuple
 
-from pyproj import Transformer
-from pyproj.exceptions import ProjError
+try:
+    from pyproj import Transformer  # type: ignore
+    from pyproj.exceptions import ProjError  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - graceful fallback when pyproj is absent
+    Transformer = None  # type: ignore
+
+    class ProjError(Exception):
+        pass
 
 SWEN17_GRID = "swen17_rh2000_20170501.gtx"
 
@@ -24,6 +30,8 @@ class GeoidResult:
 
 @lru_cache(maxsize=1)
 def _geoid_transformer() -> Transformer:
+    if Transformer is None:
+        raise GeoidUnavailableError("pyproj is required to evaluate the SWEN17_RH2000 geoid")
     pipeline = (
         "+proj=pipeline "
         "+step +proj=unitconvert +xy_in=deg +xy_out=rad "

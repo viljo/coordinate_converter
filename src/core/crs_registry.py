@@ -7,7 +7,40 @@ from enum import Enum
 from functools import lru_cache
 from typing import Iterable, Tuple
 
-from pyproj import CRS, Transformer
+try:
+    from pyproj import CRS, Transformer  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback for minimal environments
+    class CRS:  # type: ignore
+        """Lightweight stand-in used when pyproj is unavailable."""
+
+        def __init__(self, identifier: str) -> None:
+            self.identifier = identifier
+
+        @classmethod
+        def from_epsg(cls, code: int) -> "CRS":
+            return cls(f"EPSG:{code}")
+
+        @classmethod
+        def from_proj4(cls, proj4: str) -> "CRS":
+            return cls(proj4)
+
+    class Transformer:  # type: ignore
+        """Minimal transformer that only records the requested CRS pair."""
+
+        def __init__(self, src: CRS, dst: CRS) -> None:
+            self.src = src
+            self.dst = dst
+
+        @classmethod
+        def from_crs(cls, src: CRS, dst: CRS, always_xy: bool = True) -> "Transformer":
+            return cls(src, dst)
+
+        def transform(self, *args: float):  # pragma: no cover - should be handled upstream
+            raise RuntimeError("pyproj is required for this transformation")
+
+    HAVE_PYPROJ = False
+else:
+    HAVE_PYPROJ = True
 
 
 class AxisOrder(Enum):
@@ -138,6 +171,8 @@ def get_crs_info(code: CRSCode | str) -> CRSInfo:
 def get_transformer(src: CRSCode | str, dst: CRSCode | str) -> Transformer:
     """Get a cached pyproj Transformer between CRS codes."""
 
+    if not HAVE_PYPROJ:
+        raise RuntimeError("pyproj is required to build coordinate transformers")
     src_info = get_crs_info(src)
     dst_info = get_crs_info(dst)
     return Transformer.from_crs(src_info.crs, dst_info.crs, always_xy=True)
@@ -145,3 +180,14 @@ def get_transformer(src: CRSCode | str, dst: CRSCode | str) -> Transformer:
 
 def list_supported_codes() -> Tuple[CRSCode, ...]:
     return tuple(_REGISTRY.keys())
+
+
+__all__ = [
+    "AxisOrder",
+    "CRSCode",
+    "CRSInfo",
+    "HAVE_PYPROJ",
+    "get_crs_info",
+    "get_transformer",
+    "list_supported_codes",
+]
