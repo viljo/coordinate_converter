@@ -14,6 +14,7 @@ from core import parser as core_parser
 from core.parser import ParseError, ParsedCoordinate
 from core.transform import HeightSystem, TransformError, convert_to_targets
 from core.crs_registry import CRSCode
+from core import artifacts
 
 APP_TARGETS = [
     CRSCode.WGS84_GEO,
@@ -280,6 +281,10 @@ class CoordinateApp:
         self.current_results: Dict[str, List[float] | Tuple[float, ...] | str] = {}
         self.focused_field: Optional[str] = None
         self.focused_field_spec: Optional[FieldSpec] = None
+
+        warnings = artifacts.ensure_runtime_artifacts()
+        for warning in warnings:
+            print(f"[ARTIFACT WARNING] {warning}")
 
         self._rebuild_input_fields()
         self._rebuild_output_fields()

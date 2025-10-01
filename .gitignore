@@ -15,3 +15,14 @@ htmlcov/
 /.vscode/
 /build/
 /dist/
+# External geodetic grids and artifacts
+*.gsb
+*.gtx
+*.ct2
+*.pol
+proj-datumgrid-*.tar.gz
+artifacts/
+DK/
+FO/
+ISL/
+NKG/

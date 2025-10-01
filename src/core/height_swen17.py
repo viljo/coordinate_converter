@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Tuple
 
 try:
@@ -15,7 +16,12 @@ except ModuleNotFoundError:  # pragma: no cover - graceful fallback when pyproj 
     class ProjError(Exception):
         pass
 
-SWEN17_GRID = "swen17_rh2000_20170501.gtx"
+from . import artifacts
+from .artifacts import ArtifactDownloadError
+
+SWEN17_ARTIFACT_NAME = "SWEN17_RH2000.gtx"
+
+_SWEN17_PATH: Path | None = None
 
 
 class GeoidUnavailableError(RuntimeError):
@@ -28,15 +34,32 @@ class GeoidResult:
     separation: float
 
 
+def _swen17_grid_path() -> Path:
+    global _SWEN17_PATH
+    if _SWEN17_PATH is not None:
+        return _SWEN17_PATH
+    try:
+        path = artifacts.ensure_artifact(SWEN17_ARTIFACT_NAME)
+    except (ArtifactDownloadError, KeyError) as exc:
+        raise GeoidUnavailableError(
+            "SWEN17_RH2000 geoid grid could not be downloaded. "
+            "Set COORDINATE_ARTIFACTS_OFFLINE=0 or provide the file manually."
+        ) from exc
+    artifacts.register_with_pyproj([path.parent])
+    _SWEN17_PATH = path
+    return path
+
+
 @lru_cache(maxsize=1)
 def _geoid_transformer() -> Transformer:
     if Transformer is None:
         raise GeoidUnavailableError("pyproj is required to evaluate the SWEN17_RH2000 geoid")
+    grid_path = _swen17_grid_path()
     pipeline = (
         "+proj=pipeline "
         "+step +proj=unitconvert +xy_in=deg +xy_out=rad "
         "+step +proj=unitconvert +z_in=m +z_out=m "
-        f"+step +proj=vgridshift +grids={SWEN17_GRID} "
+        f"+step +proj=vgridshift +grids=@{grid_path.as_posix()} "
     )
     try:
         return Transformer.from_pipeline(pipeline)
