@@ -125,9 +125,10 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - **Clipboard content** MUST reflect rounding/precision rules in this spec and use the same labels/direction indicators as rendered.
 
 ### Clipboard Integration (Input) (CRITICAL)
-- **Paste from clipboard**: A button labeled "Paste from clipboard" MUST be placed directly under the input section label.
-  - On click: read clipboard text, switch input coordinate type to the Free-text parser, and paste the text into the free-text input field.
-  - Immediately attempt to parse; on success, update outputs and map; on failure, show an input error and do not crash.
+- **Paste from clipboard**: A button labeled "Paste from clipboard" MUST be placed directly under the "Input" label, left-aligned.
+  - On click: read clipboard text and perform a pre-parse (without changing any inputs).
+  - If a coordinate is identified, switch input type to the Free-text parser, paste the clipboard content into the free-text field, and parse immediately.
+  - If no coordinate is identified, DO NOT change input type or any current input values; show a non-blocking status message.
 
 
 ### Key Navigation Implementation

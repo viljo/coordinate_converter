@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; }
+        #map { height: 100vh; width: 100vw; cursor: crosshair; }
     </style>
 </head>
 <body>
@@ -67,8 +67,8 @@
         // Initialize with Terrain by default
         changeMapType('terrain');
 
-        // Emit clicks to host via console
-        map.on('click', function(evt) {
+        // Emit double-clicks to host via console
+        map.on('dblclick', function(evt) {
             var ll = evt.latlng;
             try {
                 console.log(JSON.stringify({ type: 'map_click', lat: ll.lat, lon: ll.lng }));

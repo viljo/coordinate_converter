@@ -290,6 +290,8 @@ class CoordinateApp:
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
+        # Accuracy indicators (input rows only)
+        self.input_accuracy_text = ft.Text(value="", size=11, color=ft.Colors.ON_SURFACE_VARIANT)
 
         self.input_fields: Dict[str, ft.TextField] = {}
         self.input_fields_container = ft.Column(spacing=8)
@@ -380,7 +382,16 @@ class CoordinateApp:
 
         controls_column = ft.Column(
             [
-                ft.Text("Input", style=ft.TextThemeStyle.TITLE_SMALL),
+                ft.Row([
+                    ft.Text("Input", style=ft.TextThemeStyle.TITLE_SMALL),
+                ]),
+                ft.Row([
+                    ft.ElevatedButton(
+                        text="Paste from clipboard",
+                        icon=ft.Icons.CONTENT_PASTE,
+                        on_click=self._on_paste_clipboard,
+                    ),
+                ], alignment=ft.MainAxisAlignment.START),
                 self.input_coord_selector,
                 self.input_height_row,
                 self.input_fields_container,
@@ -772,6 +783,36 @@ class CoordinateApp:
             self._run_conversion(self.current_parsed)
         else:
             self._update_output_fields()
+
+    def _on_paste_clipboard(self, _event) -> None:
+        """Paste clipboard into free-text parser and parse immediately."""
+        try:
+            get_clip = getattr(self.page, "get_clipboard", None)
+            clipboard_text: str = get_clip() if callable(get_clip) else ""
+        except Exception:
+            clipboard_text = ""
+        if not clipboard_text:
+            self.status_text.value = "Clipboard is empty"
+            self.page.update()
+            return
+        # Pre-parse without changing inputs
+        try:
+            preview = core_parser.parse(clipboard_text, default_crs=CRSCode.SWEREF99_GEO)
+        except Exception:
+            preview = None
+        if preview is None:
+            self.status_text.value = "No coordinate detected in clipboard"
+            self.page.update()
+            return
+        # Switch to free-text parser only when a coordinate was detected
+        self.input_coord_selector.value = "FREE_TEXT"
+        self._rebuild_input_fields()
+        text_field = self.input_fields.get("text")
+        if text_field is not None:
+            text_field.value = clipboard_text
+        # Attempt to parse and update UI/map
+        self._on_convert(None)
+        self.page.update()
 
     def _on_input_focus(self, spec: FieldSpec) -> None:
         self.focused_field = spec.name
@@ -1178,16 +1219,22 @@ class CoordinateApp:
             print(f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}")
 
     def _set_input_coordinate_from_latlon(self, lat: float, lon: float) -> None:
-        # Ensure input type supports lat/lon DD
-        if self.input_coord_selector.value not in {"WGS84_GEO_DD", "SWEREF99_GEO_DD"}:
-            self.input_coord_selector.value = "WGS84_GEO_DD"
-            self._rebuild_input_fields()
+        # Ensure input type supports lat/lon without changing type
+        if self.input_coord_selector.value not in {"WGS84_GEO_DD", "SWEREF99_GEO_DD", "WGS84_GEO_DDM", "WGS84_GEO_DMS", "SWEREF99_GEO_DDM", "SWEREF99_GEO_DMS", "FREE_TEXT"}:
+            return
         # Set values and trigger conversion
         lat_field = self.input_fields.get("lat_deg")
         lon_field = self.input_fields.get("lon_deg")
         lat_dir_field = self.input_fields.get("lat_dir")
         lon_dir_field = self.input_fields.get("lon_dir")
-        if lat_field and lon_field and lat_dir_field and lon_dir_field:
+        if self.input_coord_selector.value == "FREE_TEXT":
+            # Populate free text directly in DD (lat lon)
+            text_field = self.input_fields.get("text")
+            if text_field is not None:
+                text_field.value = f"{lat} {lon}"
+                self._on_convert(None)
+            return
+        if lat_field is not None and lon_field is not None and lat_dir_field is not None and lon_dir_field is not None:
             lat_dir_field.value = "N" if lat >= 0 else "S"
             lon_dir_field.value = "E" if lon >= 0 else "W"
             lat_field.value = f"{abs(lat):.6f}"
