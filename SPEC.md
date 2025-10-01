@@ -80,8 +80,7 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - **MUST define mapTypes object** with configurations for:
   - `osm`: OpenStreetMap (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`)
   - `satellite`: ArcGIS World Imagery
-  - `terrain`: OpenTopoMap
-  - `lantmateriet`: Swedish Lantmäteriet tiles
+  - `terrain`: OpenTopoMap (default)
 - **MUST use `changeMapType(type)` function** that:
   - Removes current layer before adding new one
   - Uses `L.tileLayer()` with proper attribution and maxZoom

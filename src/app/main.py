@@ -324,7 +324,28 @@ class CoordinateApp:
         self.map_ready = False
 
         def on_console_message(e):
-            pass
+            try:
+                msg = str(getattr(e, "message", "")).strip()
+                if not msg:
+                    return
+                # Prefer JSON payload
+                if msg.startswith("{") and msg.endswith("}"):
+                    import json
+                    data = json.loads(msg)
+                    if data.get("type") == "map_click":
+                        lat = float(data["lat"])
+                        lon = float(data["lon"])
+                        self._set_input_coordinate_from_latlon(lat, lon)
+                        return
+                # Fallback plain text: "map_click <lat> <lon>"
+                parts = msg.split()
+                if len(parts) == 3 and parts[0] == "map_click":
+                    lat = float(parts[1])
+                    lon = float(parts[2])
+                    self._set_input_coordinate_from_latlon(lat, lon)
+            except Exception:
+                # Ignore malformed console messages
+                pass
 
         webview_kwargs = {
             "url": map_url,
@@ -349,9 +370,8 @@ class CoordinateApp:
                 ft.dropdown.Option("osm", "OSM"),
                 ft.dropdown.Option("satellite", "Satellite"),
                 ft.dropdown.Option("terrain", "Terrain"),
-                ft.dropdown.Option("lantmateriet", "Lantmäteriet"),
             ],
-            value="osm",
+            value="terrain",
             on_change=self._on_map_type_change,
         )
         print(f"[INIT] Map selector created with on_change handler: {self._on_map_type_change}")
@@ -583,6 +603,9 @@ class CoordinateApp:
     def _handle_map_page_event(self, _event) -> None:
         print("[MAP] Page loaded, map is ready")
         self.map_ready = True
+        # Ensure default map type is applied
+        if hasattr(self.map_view, "run_javascript"):
+            self.map_view.run_javascript("changeMapType('terrain');")
         if self.current_results.get("WGS84_GEO"):
             lat, lon, *_ = self.current_results["WGS84_GEO"]
             self._update_map(lat, lon)
@@ -1026,9 +1049,9 @@ class CoordinateApp:
         
         map_type = self.map_selector.value
         if not map_type:
-            map_type = "osm"
-        if map_type not in {"osm", "satellite", "terrain", "lantmateriet"}:
-            map_type = "osm"
+            map_type = "terrain"
+        if map_type not in {"osm", "satellite", "terrain"}:
+            map_type = "terrain"
         self.map_selector.value = map_type
         self.map_selector.update()
         
@@ -1045,6 +1068,23 @@ class CoordinateApp:
                 traceback.print_exc()
         else:
             print(f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}")
+
+    def _set_input_coordinate_from_latlon(self, lat: float, lon: float) -> None:
+        # Ensure input type supports lat/lon DD
+        if self.input_coord_selector.value not in {"WGS84_GEO_DD", "SWEREF99_GEO_DD"}:
+            self.input_coord_selector.value = "WGS84_GEO_DD"
+            self._rebuild_input_fields()
+        # Set values and trigger conversion
+        lat_field = self.input_fields.get("lat_deg")
+        lon_field = self.input_fields.get("lon_deg")
+        lat_dir_field = self.input_fields.get("lat_dir")
+        lon_dir_field = self.input_fields.get("lon_dir")
+        if lat_field and lon_field and lat_dir_field and lon_dir_field:
+            lat_dir_field.value = "N" if lat >= 0 else "S"
+            lon_dir_field.value = "E" if lon >= 0 else "W"
+            lat_field.value = f"{abs(lat):.6f}"
+            lon_field.value = f"{abs(lon):.6f}"
+            self._on_convert(None)
 
 
 def main(page: ft.Page) -> None:
