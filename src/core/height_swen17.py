@@ -15,7 +15,6 @@ except ModuleNotFoundError:  # pragma: no cover - graceful fallback when pyproj 
 
     class ProjError(Exception):
         pass
-
 from . import artifacts
 from .artifacts import ArtifactDownloadError
 

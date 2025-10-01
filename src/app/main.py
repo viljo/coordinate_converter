@@ -14,7 +14,9 @@ from core import parser as core_parser
 from core.parser import ParseError, ParsedCoordinate
 from core.transform import HeightSystem, TransformError, convert_to_targets
 from core.crs_registry import CRSCode
+
 from core import artifacts
+
 
 APP_TARGETS = [
     CRSCode.WGS84_GEO,
@@ -229,11 +231,13 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_input_height_change,
         )
+
         self.input_height_row = ft.Row(
             controls=[self.input_height_selector],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
+
         self.output_coord_selector = ft.Dropdown(
             label="Output coordinate",
             options=[
@@ -254,6 +258,7 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_output_height_change,
         )
+
         self.output_height_field = ft.TextField(
             label=HEIGHT_LABELS.get(HeightSystem.ELLIPSOIDAL, "Height (m)"),
             read_only=True,
@@ -264,6 +269,7 @@ class CoordinateApp:
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
+
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
@@ -291,6 +297,7 @@ class CoordinateApp:
 
         map_url = self._map_url()
         self.map_ready = False
+
         webview_kwargs: Dict[str, object] = {
             "url": map_url,
             "expand": True,
@@ -300,6 +307,7 @@ class CoordinateApp:
         if javascript_mode is not None:
             webview_kwargs["javascript_mode"] = javascript_mode.UNRESTRICTED
         self.map_view = ft.WebView(**webview_kwargs)
+
 
         controls_column = ft.Column(
             [

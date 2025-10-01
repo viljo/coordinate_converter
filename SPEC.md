@@ -38,6 +38,7 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - RFN height support is scaffolded pending official parameters. The interface exists
   and tests mark numerical checks as xfail until reference data is supplied.
 
+
 ## User Experience Requirements
 1. Desktop UI: left-hand coordinate source and height source selectors dynamically
    create the relevant input boxes (e.g., lat/lon, RT90, XYZ, MGRS) while the right-hand
