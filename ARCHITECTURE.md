@@ -82,6 +82,6 @@ tiles with attribution shown in the footer.
 ## Testing Strategy
 - Parser tests cover all supported formats and ambiguous cases.
 - Helmert tests validate forward/inverse RR92 transformations and matrix symmetry.
-- Height RFN tests validate scaffolding behaviour (xfail for future constants).
+- Height RFN tests validate scaffolding behaviour (xfail until official parameters are available).
 - CSV CLI tests use temporary files to exercise detection, conversion, and error
   reporting.

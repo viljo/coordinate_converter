@@ -55,8 +55,8 @@ python -m cli.csv_convert --in samples/input.csv --out output.csv \
 
 - `--from` supplies the default CRS when a row cannot be inferred.
 - `--to` may contain multiple comma-separated targets.
-- Height selection currently accepts `ELLIPSOIDAL` and `RH2000`. RFN heights expose
-  an interface but require official constants.
+- Height selection currently accepts `ELLIPSOIDAL` and `RH2000`. RFN heights are
+  stubbed until authoritative parameters are published.
 
 Unknown columns are preserved, and row-level errors are appended to a summary written
 to stderr.
@@ -74,7 +74,8 @@ to stderr.
 ## Height Systems
 - **Ellipsoidal**: h above GRS80/WGS84 ellipsoid.
 - **RH2000**: H = h − N using the SWEN17_RH2000 geoid grid.
-- **RFN**: Placeholder until §3.9.3 constants are released; see `core/height_rfn.py`.
+- **RFN**: Placeholder module pending publication of official transformation
+  parameters; see `core/height_rfn.py`.
 
 ## Development
 ```bash

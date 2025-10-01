@@ -15,6 +15,9 @@ from core.parser import ParseError, ParsedCoordinate
 from core.transform import HeightSystem, TransformError, convert_to_targets
 from core.crs_registry import CRSCode
 
+from core import artifacts
+
+
 APP_TARGETS = [
     CRSCode.WGS84_GEO,
     CRSCode.SWEREF99_GEO,
@@ -228,6 +231,13 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_input_height_change,
         )
+
+        self.input_height_row = ft.Row(
+            controls=[self.input_height_selector],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
         self.output_coord_selector = ft.Dropdown(
             label="Output coordinate",
             options=[
@@ -248,6 +258,18 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_output_height_change,
         )
+
+        self.output_height_field = ft.TextField(
+            label=HEIGHT_LABELS.get(HeightSystem.ELLIPSOIDAL, "Height (m)"),
+            read_only=True,
+            helper_text="",
+        )
+        self.output_height_row = ft.Row(
+            controls=[self.output_height_selector, self.output_height_field],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
@@ -266,27 +288,37 @@ class CoordinateApp:
         self.focused_field: Optional[str] = None
         self.focused_field_spec: Optional[FieldSpec] = None
 
+        warnings = artifacts.ensure_runtime_artifacts()
+        for warning in warnings:
+            print(f"[ARTIFACT WARNING] {warning}")
+
         self._rebuild_input_fields()
         self._rebuild_output_fields()
 
         map_url = self._map_url()
         self.map_ready = False
-        self.map_view = ft.WebView(
-            url=map_url,
-            expand=True,
-            on_page_ended=self._handle_map_page_event,
-        )
+
+        webview_kwargs: Dict[str, object] = {
+            "url": map_url,
+            "expand": True,
+            "on_page_ended": self._handle_map_page_event,
+        }
+        javascript_mode = getattr(ft, "JavascriptMode", None)
+        if javascript_mode is not None:
+            webview_kwargs["javascript_mode"] = javascript_mode.UNRESTRICTED
+        self.map_view = ft.WebView(**webview_kwargs)
+
 
         controls_column = ft.Column(
             [
                 ft.Text("Input", style=ft.TextThemeStyle.TITLE_SMALL),
                 self.input_coord_selector,
-                self.input_height_selector,
+                self.input_height_row,
                 self.input_fields_container,
                 ft.Divider(),
                 ft.Text("Output", style=ft.TextThemeStyle.TITLE_SMALL),
                 self.output_coord_selector,
-                self.output_height_selector,
+                self.output_height_row,
                 self.output_fields_container,
                 ft.Divider(),
                 self.status_text,
@@ -310,7 +342,6 @@ class CoordinateApp:
 
     def _rebuild_input_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
-        self.input_height_selector.visible = option.separate_height
         self.input_fields.clear()
         controls: List[ft.Control] = []
         self._suspend_input_events = True
@@ -326,18 +357,19 @@ class CoordinateApp:
             field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
             self.input_fields[spec.name] = field
             controls.append(field)
+        self.input_height_row.controls = [self.input_height_selector]
         if option.separate_height:
             label = HEIGHT_LABELS.get(self.input_height_selector.value, "Height (m)")
-            self.input_height_field = ft.TextField(
-                label=label,
-            )
+            self.input_height_field = ft.TextField(label=label)
             height_spec = FieldSpec("height", label, decimals=3)
             self.input_height_field.on_focus = lambda _e, s=height_spec: self._on_input_focus(s)
             self.input_height_field.on_blur = self._on_input_blur
             self.input_height_field.on_change = lambda _e: self._on_input_change("height")
-            controls.append(self.input_height_field)
+            self.input_height_row.controls.append(self.input_height_field)
+            self.input_height_row.visible = True
         else:
             self.input_height_field = None
+            self.input_height_row.visible = False
         self._suspend_input_events = False
         self.input_fields_container.controls = controls
         self.focused_field = None
@@ -349,6 +381,12 @@ class CoordinateApp:
         if not self.current_results:
             return
         values = self.current_results.get(option.result_key)
+        if isinstance(values, str):
+            if option.key == "MGRS":
+                field = self.input_fields.get("mgrs")
+                if field is not None:
+                    field.value = values
+            return
         if not values:
             if option.key == "MGRS" and "MGRS" in self.current_results:
                 self._suspend_input_events = True
@@ -396,7 +434,8 @@ class CoordinateApp:
             self.output_fields[spec.name] = field
             controls.append(field)
         self.output_fields_container.controls = controls
-        self.output_height_selector.visible = option.separate_height
+        self.output_height_row.visible = option.separate_height
+        self._update_output_height_display()
         self.page.update()
 
     def _map_url(self) -> str:
@@ -439,6 +478,26 @@ class CoordinateApp:
             return summary
         return ""
 
+    def _update_output_height_display(self) -> None:
+        label = HEIGHT_LABELS.get(self.output_height_selector.value, "Height (m)")
+        self.output_height_field.label = label
+        helper = ""
+        if "HEIGHT_ERROR" in self.current_results:
+            self.output_height_field.value = ""
+            helper = str(self.current_results["HEIGHT_ERROR"])
+        else:
+            height_values = self.current_results.get("HEIGHT")
+            if isinstance(height_values, (tuple, list)) and height_values:
+                self.output_height_field.value = f"{float(height_values[0]):.3f}"
+                if "HEIGHT_INFO" in self.current_results:
+                    separation = float(self.current_results["HEIGHT_INFO"][0])
+                    helper = f"Geoid separation: {separation:.3f} m"
+            else:
+                self.output_height_field.value = ""
+        self.output_height_field.helper_text = helper
+        if self.output_height_field.page is not None:
+            self.output_height_field.update()
+
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
         sign = positive if value >= 0 else negative
@@ -480,6 +539,7 @@ class CoordinateApp:
             self._update_output_fields()
 
     def _on_output_height_change(self, _event) -> None:
+        self._update_output_height_display()
         if self.current_parsed:
             self._run_conversion(self.current_parsed)
         else:
@@ -599,6 +659,7 @@ class CoordinateApp:
         self.current_results = results
 
         self._update_output_fields()
+        self._update_output_height_display()
 
         lat, lon, *_ = results.get("WGS84_GEO", (0.0, 0.0, 0.0))
         self.status_text.value = (

@@ -14,9 +14,7 @@ class RFNHeightUnavailable(RuntimeError):
 class RFNHeightModel:
     name: str = "RFN"
     reference_epoch: Optional[str] = None
-    notes: str = (
-        "RFN height transformation constants per LMV §3.9.3 are not yet published."
-    )
+    notes: str = "RFN height transformation parameters are not yet available."
 
     def orthometric_to_ellipsoidal(self, *_args, **_kwargs):  # pragma: no cover - placeholder
         raise RFNHeightUnavailable(self.notes)

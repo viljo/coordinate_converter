@@ -35,8 +35,9 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - Ellipsoidal heights align with GRS80/WGS84 and are treated interchangeably in the UI.
 - RH2000 orthometric heights use the SWEN17_RH2000 geoid (GTX grid). When the grid is
   unavailable a warning is surfaced and the conversion gracefully degrades.
-- RFN height support is scaffolded for future constants. The interface exists and
-  tests mark numerical checks as xfail until constants from LMV report §3.9.3 are added.
+- RFN height support is scaffolded pending official parameters. The interface exists
+  and tests mark numerical checks as xfail until reference data is supplied.
+
 
 ## User Experience Requirements
 1. Desktop UI: left-hand coordinate source and height source selectors dynamically
