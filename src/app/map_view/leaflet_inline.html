@@ -33,11 +33,6 @@
                 url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
                 attribution: 'Map data: &copy; OpenStreetMap, SRTM | Map style: &copy; OpenTopoMap',
                 maxZoom: 17
-            },
-            'lantmateriet': {
-                url: 'https://minkarta.lantmateriet.se/map/topowebbcache/{z}/{y}/{x}.png',
-                attribution: '&copy; Lantmäteriet',
-                maxZoom: 15
             }
         };
         
@@ -69,8 +64,8 @@
             map.setView([lat, lon], map.getZoom());
         }
         
-        // Initialize with OSM
-        changeMapType('osm');
+        // Initialize with Terrain
+        changeMapType('terrain');
         
         // Mark as ready
         window.mapReady = true;

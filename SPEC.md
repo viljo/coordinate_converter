@@ -82,9 +82,10 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
   - **Height (meters)**: 2 decimal places (±2.5cm)
     - Max "12345.12" (8 chars)
 - **Field sizing**: Text field width MUST exactly fit maximum allowed coordinate with precision
-- **Accuracy display**: Show current accuracy to the right of coordinate display, outside the box
+- **Accuracy display (input only)**: Show current accuracy to the right of input coordinate display, outside the box
   - Format: "accuracy: <newline> X.Xm" (e.g., "accuracy: ↵ 0.4m")
   - Display dynamically based on actual input precision
+  - MUST NOT be shown on output rows
 
 ### Field Order and Layout (TESTED & WORKING)
 - **Direction fields MUST appear first** in each row:
@@ -112,6 +113,22 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - **All read-only output fields MUST be bold**: `text_style=ft.TextStyle(weight=ft.FontWeight.BOLD)`
 - Same field order as input (direction first)
 - Same labels on borders (never placeholders)
+
+### Copy-to-Clipboard Controls (CRITICAL)
+- **Per-row output copy**: A copy button MUST be placed to the left of each output coordinate row (Latitude and Longitude sections). Clicking copies that row’s coordinate in the currently selected output format with the specified precision and direction labels.
+  - DD: "<lat>, <lon>" with 7 dp for DD output rows where applicable
+  - DDM/DMS: component-formatted per format and direction letters
+  - Projected (e.g., RT90): numeric with 2 dp and unit where applicable
+  - MGRS: full grid string
+- **Full output copy**: A copy button MUST be placed to the left of the bottommost combined output row (showing full coordinate and height). Clicking copies the entire assembled output string exactly as displayed.
+- **Height-only copy**: A copy button MUST be placed to the left of the output height box to copy height value with unit and height system.
+- **Clipboard content** MUST reflect rounding/precision rules in this spec and use the same labels/direction indicators as rendered.
+
+### Clipboard Integration (Input) (CRITICAL)
+- **Paste from clipboard**: A button labeled "Paste from clipboard" MUST be placed directly under the input section label.
+  - On click: read clipboard text, switch input coordinate type to the Free-text parser, and paste the text into the free-text input field.
+  - Immediately attempt to parse; on success, update outputs and map; on failure, show an input error and do not crash.
+
 
 ### Key Navigation Implementation
 - Implemented in `_on_page_key()` method in `main.py`
@@ -174,6 +191,11 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - **MUST initialize with Terrain**: `changeMapType('terrain');`
 - **MUST set `window.mapReady = true;`** at end of script
 - **MUST emit click events**: `map.on('click', ...)` emits console messages for coordinate selection
+
+### Map Interaction (CRITICAL)
+- **Double-click selects coordinate**: Map selection MUST be triggered by double-click (`dblclick`), not single click. The emitted event should include lat/lon as before.
+- **Selection MUST NOT change input type**: Selecting a coordinate via the map must update values in the current input format (if applicable) without switching the input coordinate type selector.
+- **Crosshair cursor**: The map cursor MUST be a crosshair when hovering over the map to convey precision selection.
 
 ### Map Update Mechanism (TESTED & WORKING)
 - **MUST use `updateMapCenter(lat, lon)` function** exposed on window

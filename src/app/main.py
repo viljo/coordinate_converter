@@ -168,13 +168,14 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key=CRSCode.RT90_3021.value,
         label="RT90 2.5 gon V",
         fields=[
-            FieldSpec("easting", "Easting (m)", decimals=3),
-            FieldSpec("northing", "Northing (m)", decimals=3),
+            FieldSpec("easting", "Easting (m)", decimals=2),
+            FieldSpec("northing", "Northing (m)", decimals=2),
         ],
         source_format="RT90",
         result_key=CRSCode.RT90_3021.value,
         crs=CRSCode.RT90_3021,
         default_crs=CRSCode.RT90_3021,
+        separate_height=True,
     ),
     CoordinateOption(
         key=CRSCode.WGS84_XYZ.value,
@@ -212,7 +213,7 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         result_key="MGRS",
         crs=None,
         default_crs=CRSCode.WGS84_GEO,
-        separate_height=False,
+        separate_height=True,
     ),
 ]
 
@@ -647,14 +648,17 @@ class CoordinateApp:
         else:
             # Legacy formats
             for spec in option.fields:
-                field = ft.TextField(label=spec.label, read_only=True)
+                field = ft.TextField(
+                    label=spec.label,
+                    read_only=True,
+                    width=ui_builder.UIBuilder.COORD_FIELD_WIDTH,
+                    text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
+                )
                 self.output_fields[spec.name] = field
                 controls.append(field)
         
         self.output_fields_container.controls = controls
         self.output_height_row.visible = option.separate_height
-        if option.separate_height:
-            self.output_height_field.width = 180
         self._update_output_height_display()
         self.page.update()
 
