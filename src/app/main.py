@@ -14,6 +14,8 @@ from core import parser as core_parser
 from core.parser import ParseError, ParsedCoordinate
 from core.transform import HeightSystem, TransformError, convert_to_targets
 from core.crs_registry import CRSCode
+from core import artifacts
+from app import ui_builder
 
 APP_TARGETS = [
     CRSCode.WGS84_GEO,
@@ -64,8 +66,10 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="WGS84_GEO_DD",
         label="WGS84 geographic (DD)",
         fields=[
-            FieldSpec("lat", "Latitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
-            FieldSpec("lon", "Longitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lat_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DD"),
+            FieldSpec("lon_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DD"),
         ],
         source_format="DD",
         result_key=CRSCode.WGS84_GEO.value,
@@ -77,8 +81,12 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="WGS84_GEO_DDM",
         label="WGS84 geographic (DDM)",
         fields=[
-            FieldSpec("lat", "Latitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
-            FieldSpec("lon", "Longitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
+            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
+            FieldSpec("lat_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DDM"),
         ],
         source_format="DDM",
         result_key=CRSCode.WGS84_GEO.value,
@@ -90,8 +98,14 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="WGS84_GEO_DMS",
         label="WGS84 geographic (DMS)",
         fields=[
-            FieldSpec("lat", "Latitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon", "Longitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DMS"),
         ],
         source_format="DMS",
         result_key=CRSCode.WGS84_GEO.value,
@@ -103,8 +117,10 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="SWEREF99_GEO_DD",
         label="SWEREF99 geographic (DD)",
         fields=[
-            FieldSpec("lat", "Latitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
-            FieldSpec("lon", "Longitude (DD.ddddd°)", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lat_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DD"),
+            FieldSpec("lon_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DD"),
         ],
         source_format="DD",
         result_key=CRSCode.SWEREF99_GEO.value,
@@ -116,8 +132,12 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="SWEREF99_GEO_DDM",
         label="SWEREF99 geographic (DDM)",
         fields=[
-            FieldSpec("lat", "Latitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
-            FieldSpec("lon", "Longitude (DD° MM.mmmm')", decimals=6, is_angle=True, format_mode="DDM"),
+            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
+            FieldSpec("lat_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DDM"),
         ],
         source_format="DDM",
         result_key=CRSCode.SWEREF99_GEO.value,
@@ -129,8 +149,14 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="SWEREF99_GEO_DMS",
         label="SWEREF99 geographic (DMS)",
         fields=[
-            FieldSpec("lat", "Latitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon", "Longitude (DD° MM' SS.s\")", decimals=6, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DMS"),
         ],
         source_format="DMS",
         result_key=CRSCode.SWEREF99_GEO.value,
@@ -142,8 +168,8 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key=CRSCode.RT90_3021.value,
         label="RT90 2.5 gon V",
         fields=[
-            FieldSpec("northing", "Northing (m)", decimals=3),
             FieldSpec("easting", "Easting (m)", decimals=3),
+            FieldSpec("northing", "Northing (m)", decimals=3),
         ],
         source_format="RT90",
         result_key=CRSCode.RT90_3021.value,
@@ -192,11 +218,7 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
 
 COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {option.key: option for option in COORDINATE_OPTIONS_LIST}
 
-HEIGHT_LABELS = {
-    HeightSystem.ELLIPSOIDAL: "Ellipsoidal height (m)",
-    HeightSystem.RH2000: "RH2000 height (m)",
-    HeightSystem.RFN: "RFN height (m)",
-}
+HEIGHT_LABEL = "Height (m)"
 
 
 class CoordinateApp:
@@ -205,8 +227,8 @@ class CoordinateApp:
         self.page.title = "Coordinate Converter"
         self.page.padding = 16
         self.page.theme_mode = ft.ThemeMode.SYSTEM
-        self.page.window_width = 1200
-        self.page.window_height = 800
+        self.page.window_width = 1400
+        self.page.window_height = 900
         self.page.on_keyboard_event = self._on_page_key
         self.input_coord_selector = ft.Dropdown(
             label="Input coordinate source",
@@ -228,6 +250,11 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_input_height_change,
         )
+        self.input_height_row = ft.Row(
+            controls=[self.input_height_selector],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
         self.output_coord_selector = ft.Dropdown(
             label="Output coordinate",
             options=[
@@ -248,6 +275,16 @@ class CoordinateApp:
             value=HeightSystem.ELLIPSOIDAL,
             on_change=self._on_output_height_change,
         )
+        self.output_height_field = ft.TextField(
+            label=HEIGHT_LABEL,
+            read_only=True,
+            helper_text="",
+        )
+        self.output_height_row = ft.Row(
+            controls=[self.output_height_selector, self.output_height_field],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
@@ -266,27 +303,69 @@ class CoordinateApp:
         self.focused_field: Optional[str] = None
         self.focused_field_spec: Optional[FieldSpec] = None
 
+        warnings = artifacts.ensure_runtime_artifacts()
+        for warning in warnings:
+            print(f"[ARTIFACT WARNING] {warning}")
         self._rebuild_input_fields()
         self._rebuild_output_fields()
 
-        map_url = self._map_url()
+        # Map setup using data URL inline HTML
+        map_html_content = (Path(__file__).resolve().parent / "map_view" / "leaflet.html").read_text()
+        tile_url = os.getenv("OSM_TILE_URL")
+        if tile_url:
+            map_html_content = map_html_content.replace(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                tile_url,
+            )
+        # Use base64 encoding for better compatibility
+        import base64
+        map_html_b64 = base64.b64encode(map_html_content.encode('utf-8')).decode('ascii')
+        map_url = f"data:text/html;base64,{map_html_b64}"
         self.map_ready = False
-        self.map_view = ft.WebView(
-            url=map_url,
-            expand=True,
-            on_page_ended=self._handle_map_page_event,
+
+        def on_console_message(e):
+            pass
+
+        webview_kwargs = {
+            "url": map_url,
+            "expand": True,
+            "on_page_ended": self._handle_map_page_event,
+            "on_console_message": on_console_message,
+        }
+        
+        # Try to enable JavaScript with the correct property name
+        javascript_mode = getattr(ft, "JavascriptMode", None)
+        if javascript_mode is not None:
+            webview_kwargs["javascript_mode"] = javascript_mode.UNRESTRICTED
+        
+        self.map_view = ft.WebView(**webview_kwargs)
+        
+        print(f"[INIT] WebView created, type: {type(self.map_view)}")
+        print(f"[INIT] WebView methods: {[m for m in dir(self.map_view) if not m.startswith('_')][:20]}")
+
+        self.map_selector = ft.Dropdown(
+            label="Map Type",
+            options=[
+                ft.dropdown.Option("osm", "OSM"),
+                ft.dropdown.Option("satellite", "Satellite"),
+                ft.dropdown.Option("terrain", "Terrain"),
+                ft.dropdown.Option("lantmateriet", "Lantmäteriet"),
+            ],
+            value="osm",
+            on_change=self._on_map_type_change,
         )
+        print(f"[INIT] Map selector created with on_change handler: {self._on_map_type_change}")
 
         controls_column = ft.Column(
             [
                 ft.Text("Input", style=ft.TextThemeStyle.TITLE_SMALL),
                 self.input_coord_selector,
-                self.input_height_selector,
+                self.input_height_row,
                 self.input_fields_container,
                 ft.Divider(),
                 ft.Text("Output", style=ft.TextThemeStyle.TITLE_SMALL),
                 self.output_coord_selector,
-                self.output_height_selector,
+                self.output_height_row,
                 self.output_fields_container,
                 ft.Divider(),
                 self.status_text,
@@ -294,50 +373,122 @@ class CoordinateApp:
                 self.formatted_text,
             ],
             expand=True,
-            scroll=ft.ScrollMode.AUTO,
         )
 
         self.page.add(
             ft.Row(
                 [
-                    ft.Container(controls_column, width=420),
+                    ft.Container(
+                        content=controls_column,
+                        width=450,
+                        padding=ft.padding.only(left=10, right=10, top=10, bottom=10),
+                    ),
                     ft.VerticalDivider(width=1),
-                    ft.Container(self.map_view, expand=True),
+                    ft.Container(
+                        content=self.map_view,
+                        expand=True,
+                    ),
                 ],
                 expand=True,
             )
         )
 
+        self.page.add(
+            ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Container(width=450),
+                        ft.VerticalDivider(width=1),
+                        ft.Container(
+                            content=self.map_selector,
+                            padding=ft.padding.only(left=10, right=10, top=5, bottom=5),
+                        ),
+                    ],
+                ),
+                height=60,
+            )
+        )
+
     def _rebuild_input_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
-        self.input_height_selector.visible = option.separate_height
         self.input_fields.clear()
         controls: List[ft.Control] = []
         self._suspend_input_events = True
-        for index, spec in enumerate(option.fields):
-            field = ft.TextField(
-                label=spec.label,
-                autofocus=index == 0,
-                multiline=spec.name in {"mgrs", "text"},
+        
+        # Use UIBuilder for DD/DDM/DMS formats
+        # UIBuilder callbacks receive event object only, not FieldSpec
+        # We need to create FieldSpec from the field name for focus tracking
+        def make_on_focus(field_name: str, label: str):
+            def handler(e):
+                spec = FieldSpec(field_name, label, decimals=6, is_angle=True)
+                self._on_input_focus(spec)
+            return handler
+        
+        if option.source_format == "DD":
+            # Create the fields first, then set up callbacks
+            controls = ui_builder.UIBuilder.build_dd_input_fields(
+                self.input_fields,
+                lambda e: None,  # Placeholder, we'll override
+                self._on_input_blur,
+                lambda e: self._on_input_change(None),
             )
-            if spec.name != "mgrs":
-                field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
-                field.on_blur = self._on_input_blur
-            field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
-            self.input_fields[spec.name] = field
-            controls.append(field)
+            # Now set proper focus handlers with FieldSpec
+            self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
+            self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
+            
+        elif option.source_format == "DDM":
+            controls = ui_builder.UIBuilder.build_ddm_input_fields(
+                self.input_fields,
+                lambda e: None,
+                self._on_input_blur,
+                lambda e: self._on_input_change(None),
+            )
+            self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
+            self.input_fields["lat_min"].on_focus = make_on_focus("lat_min", "Minutes")
+            self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
+            self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
+            
+        elif option.source_format == "DMS":
+            controls = ui_builder.UIBuilder.build_dms_input_fields(
+                self.input_fields,
+                lambda e: None,
+                self._on_input_blur,
+                lambda e: self._on_input_change(None),
+            )
+            self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
+            self.input_fields["lat_min"].on_focus = make_on_focus("lat_min", "Minutes")
+            self.input_fields["lat_sec"].on_focus = make_on_focus("lat_sec", "Seconds")
+            self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
+            self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
+            self.input_fields["lon_sec"].on_focus = make_on_focus("lon_sec", "Seconds")
+        else:
+            # Legacy formats (RT90, XYZ, MGRS, etc.)
+            for index, spec in enumerate(option.fields):
+                field = ft.TextField(
+                    label=spec.label,
+                    autofocus=index == 0,
+                    multiline=spec.name in {"mgrs", "text"},
+                )
+                if spec.name != "mgrs":
+                    field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
+                    field.on_blur = self._on_input_blur
+                field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
+                self.input_fields[spec.name] = field
+                controls.append(field)
+        
+        self.input_height_row.controls = [self.input_height_selector]
         if option.separate_height:
-            label = HEIGHT_LABELS.get(self.input_height_selector.value, "Height (m)")
-            self.input_height_field = ft.TextField(
-                label=label,
+            height_spec = FieldSpec("height", HEIGHT_LABEL, decimals=3)
+            self.input_height_field = ui_builder.UIBuilder.create_height_field(
+                on_focus=lambda e: self._on_input_focus(height_spec),
+                on_blur=self._on_input_blur,
+                on_change=lambda e: self._on_input_change("height"),
             )
-            height_spec = FieldSpec("height", label, decimals=3)
-            self.input_height_field.on_focus = lambda _e, s=height_spec: self._on_input_focus(s)
-            self.input_height_field.on_blur = self._on_input_blur
-            self.input_height_field.on_change = lambda _e: self._on_input_change("height")
-            controls.append(self.input_height_field)
+            self.input_height_row.controls.append(self.input_height_field)
+            self.input_height_row.visible = True
         else:
             self.input_height_field = None
+            self.input_height_row.visible = False
         self._suspend_input_events = False
         self.input_fields_container.controls = controls
         self.focused_field = None
@@ -349,6 +500,12 @@ class CoordinateApp:
         if not self.current_results:
             return
         values = self.current_results.get(option.result_key)
+        if isinstance(values, str):
+            if option.key == "MGRS":
+                field = self.input_fields.get("mgrs")
+                if field is not None:
+                    field.value = values
+            return
         if not values:
             if option.key == "MGRS" and "MGRS" in self.current_results:
                 self._suspend_input_events = True
@@ -372,10 +529,10 @@ class CoordinateApp:
                     continue
                 value = float(values[index])
                 if spec.is_angle and spec.format_mode == "DDM":
-                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
+                    positive, negative = ("N", "S") if spec.name == "lat_dir" else ("E", "W")
                     field.value = self._deg_to_ddm(value, positive, negative)
                 elif spec.is_angle and spec.format_mode == "DMS":
-                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
+                    positive, negative = ("N", "S") if spec.name == "lat_dir" else ("E", "W")
                     field.value = self._deg_to_dms(value, positive, negative)
                 else:
                     decimals = spec.decimals if not spec.is_angle else 6
@@ -391,24 +548,40 @@ class CoordinateApp:
         option = COORDINATE_OPTIONS[self.output_coord_selector.value]
         self.output_fields.clear()
         controls: List[ft.Control] = []
-        for spec in option.fields:
-            field = ft.TextField(label=spec.label, read_only=True)
-            self.output_fields[spec.name] = field
-            controls.append(field)
+        
+        # Use UIBuilder for DD/DDM/DMS formats
+        if option.source_format == "DD":
+            controls = ui_builder.UIBuilder.build_dd_output_fields(self.output_fields)
+        elif option.source_format == "DDM":
+            controls = ui_builder.UIBuilder.build_ddm_output_fields(self.output_fields)
+        elif option.source_format == "DMS":
+            controls = ui_builder.UIBuilder.build_dms_output_fields(self.output_fields)
+        else:
+            # Legacy formats
+            for spec in option.fields:
+                field = ft.TextField(label=spec.label, read_only=True)
+                self.output_fields[spec.name] = field
+                controls.append(field)
+        
         self.output_fields_container.controls = controls
-        self.output_height_selector.visible = option.separate_height
+        self.output_height_row.visible = option.separate_height
+        if option.separate_height:
+            self.output_height_field.width = 180
+        self._update_output_height_display()
         self.page.update()
 
     def _map_url(self) -> str:
-        html_path = Path(__file__).resolve().parent / "map_view" / "leaflet.html"
+        inline_html = (Path(__file__).resolve().parent / "map_view" / "leaflet.html").read_text()
         tile_url = os.getenv("OSM_TILE_URL")
         if tile_url:
-            return f"{html_path.as_uri()}?tile={urllib.parse.quote(tile_url)}"
-        return html_path.as_uri()
+            inline_html = inline_html.replace(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                tile_url,
+            )
+        return f"data:text/html,{urllib.parse.quote(inline_html)}"
 
     def _handle_map_page_event(self, _event) -> None:
-        """Mark the embedded map as ready once its initial load completes."""
-
+        print("[MAP] Page loaded, map is ready")
         self.map_ready = True
         if self.current_results.get("WGS84_GEO"):
             lat, lon, *_ = self.current_results["WGS84_GEO"]
@@ -417,7 +590,8 @@ class CoordinateApp:
     def _update_map(self, lat: float, lon: float) -> None:
         if not self.map_ready:
             return
-        self.map_view.eval_js(f"updateMapCenter({lat}, {lon});")
+        if hasattr(self.map_view, "run_javascript"):
+            self.map_view.run_javascript(f"updateMapCenter({lat}, {lon});")
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
@@ -431,13 +605,33 @@ class CoordinateApp:
             return str(self.current_results["HEIGHT_ERROR"])
         if "HEIGHT" in self.current_results:
             height_value = float(self.current_results["HEIGHT"][0])
-            label = HEIGHT_LABELS.get(self.output_height_selector.value, "Height")
+            label = HEIGHT_LABEL
             summary = f"{label}: {height_value:.3f} m"
             if "HEIGHT_INFO" in self.current_results:
                 separation = float(self.current_results["HEIGHT_INFO"][0])
                 summary += f" (Geoid sep: {separation:.3f} m)"
             return summary
         return ""
+
+    def _update_output_height_display(self) -> None:
+        label = HEIGHT_LABEL
+        self.output_height_field.label = label
+        helper = ""
+        if "HEIGHT_ERROR" in self.current_results:
+            self.output_height_field.value = ""
+            helper = str(self.current_results["HEIGHT_ERROR"])
+        else:
+            height_values = self.current_results.get("HEIGHT")
+            if isinstance(height_values, (tuple, list)) and height_values:
+                self.output_height_field.value = f"{float(height_values[0]):.3f}"
+                if "HEIGHT_INFO" in self.current_results:
+                    separation = float(self.current_results["HEIGHT_INFO"][0])
+                    helper = f"Geoid separation: {separation:.3f} m"
+            else:
+                self.output_height_field.value = ""
+        self.output_height_field.helper_text = helper
+        if self.output_height_field.page is not None:
+            self.output_height_field.update()
 
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
@@ -465,9 +659,7 @@ class CoordinateApp:
     def _on_input_height_change(self, _event) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
         if option.separate_height and self.input_height_field is not None:
-            self.input_height_field.label = HEIGHT_LABELS.get(
-                self.input_height_selector.value, "Height (m)"
-            )
+            self.input_height_field.label = HEIGHT_LABEL
         self.page.update()
         if self._inputs_complete():
             self._on_convert(None)
@@ -480,6 +672,7 @@ class CoordinateApp:
             self._update_output_fields()
 
     def _on_output_height_change(self, _event) -> None:
+        self._update_output_height_display()
         if self.current_parsed:
             self._run_conversion(self.current_parsed)
         else:
@@ -538,23 +731,86 @@ class CoordinateApp:
                 raise ParseError("Enter an MGRS coordinate")
             parsed = core_parser.parse(value, default_crs=CRSCode.SWEREF99_GEO)
         elif option.crs in {CRSCode.WGS84_GEO, CRSCode.SWEREF99_GEO}:
-            lat_text = self.input_fields["lat"].value.strip()
-            lon_text = self.input_fields["lon"].value.strip()
-            if not lat_text or not lon_text:
-                raise ParseError("Latitude and longitude are required")
-            composed = f"{lat_text} {lon_text}".strip()
-            height_text = None
-            if option.separate_height and self.input_height_field is not None:
-                height_text = self.input_height_field.value.strip()
+            # Handle DD/DDM/DMS formats with separate direction fields
+            if option.source_format in {"DD", "DDM", "DMS"}:
+                # Get direction values
+                lat_dir_field = self.input_fields.get("lat_dir")
+                lon_dir_field = self.input_fields.get("lon_dir")
+                lat_dir = lat_dir_field.value.strip().upper() if lat_dir_field and lat_dir_field.value else "N"
+                lon_dir = lon_dir_field.value.strip().upper() if lon_dir_field and lon_dir_field.value else "E"
+                
+                if option.source_format == "DD":
+                    lat_deg = self.input_fields["lat_deg"].value.strip()
+                    lon_deg = self.input_fields["lon_deg"].value.strip()
+                    if not lat_deg or not lon_deg:
+                        raise ParseError("Latitude and longitude degrees are required")
+                    
+                    # Apply direction signs
+                    lat_val = float(lat_deg) if lat_dir == "N" else -float(lat_deg)
+                    lon_val = float(lon_deg) if lon_dir == "E" else -float(lon_deg)
+                    composed = f"{lat_val} {lon_val}"
+                elif option.source_format == "DDM":
+                    lat_deg = self.input_fields["lat_deg"].value.strip()
+                    lat_min = self.input_fields["lat_min"].value.strip()
+                    lon_deg = self.input_fields["lon_deg"].value.strip()
+                    lon_min = self.input_fields["lon_min"].value.strip()
+                    if not all([lat_deg, lat_min, lon_deg, lon_min]):
+                        raise ParseError("All latitude and longitude components are required")
+                    
+                    # Convert to decimal degrees and apply direction signs
+                    lat_val = float(lat_deg) + float(lat_min) / 60.0
+                    lon_val = float(lon_deg) + float(lon_min) / 60.0
+                    lat_val = lat_val if lat_dir == "N" else -lat_val
+                    lon_val = lon_val if lon_dir == "E" else -lon_val
+                    composed = f"{lat_val} {lon_val}"
+                elif option.source_format == "DMS":
+                    lat_deg = self.input_fields["lat_deg"].value.strip()
+                    lat_min = self.input_fields["lat_min"].value.strip()
+                    lat_sec = self.input_fields["lat_sec"].value.strip()
+                    lon_deg = self.input_fields["lon_deg"].value.strip()
+                    lon_min = self.input_fields["lon_min"].value.strip()
+                    lon_sec = self.input_fields["lon_sec"].value.strip()
+                    if not all([lat_deg, lat_min, lat_sec, lon_deg, lon_min, lon_sec]):
+                        raise ParseError("All latitude and longitude components are required")
+                    
+                    # Convert to decimal degrees and apply direction signs
+                    lat_val = float(lat_deg) + float(lat_min) / 60.0 + float(lat_sec) / 3600.0
+                    lon_val = float(lon_deg) + float(lon_min) / 60.0 + float(lon_sec) / 3600.0
+                    lat_val = lat_val if lat_dir == "N" else -lat_val
+                    lon_val = lon_val if lon_dir == "E" else -lon_val
+                    composed = f"{lat_val} {lon_val}"
+                
+                height_text = None
+                if option.separate_height and self.input_height_field is not None:
+                    height_text = self.input_height_field.value.strip()
+                    if height_text:
+                        composed = f"{composed} {height_text}"
+                parsed = core_parser.parse(composed, default_crs=option.default_crs)
+                parsed.crs = option.crs or option.default_crs
                 if height_text:
-                    composed = f"{composed} {height_text}"
-            parsed = core_parser.parse(composed, default_crs=option.default_crs)
-            parsed.crs = option.crs or option.default_crs
-            if height_text:
-                try:
-                    parsed.height = float(height_text.replace(",", "."))
-                except ValueError as exc:  # pragma: no cover - validated earlier
-                    raise ParseError("Height must be numeric") from exc
+                    try:
+                        parsed.height = float(height_text.replace(",", "."))
+                    except ValueError as exc:  # pragma: no cover - validated earlier
+                        raise ParseError("Height must be numeric") from exc
+            else:
+                # Fallback for legacy lat/lon format
+                lat_text = self.input_fields.get("lat", ft.TextField()).value.strip()
+                lon_text = self.input_fields.get("lon", ft.TextField()).value.strip()
+                if not lat_text or not lon_text:
+                    raise ParseError("Latitude and longitude are required")
+                composed = f"{lat_text} {lon_text}".strip()
+                height_text = None
+                if option.separate_height and self.input_height_field is not None:
+                    height_text = self.input_height_field.value.strip()
+                    if height_text:
+                        composed = f"{composed} {height_text}"
+                parsed = core_parser.parse(composed, default_crs=option.default_crs)
+                parsed.crs = option.crs or option.default_crs
+                if height_text:
+                    try:
+                        parsed.height = float(height_text.replace(",", "."))
+                    except ValueError as exc:  # pragma: no cover - validated earlier
+                        raise ParseError("Height must be numeric") from exc
         else:
             values: List[float] = []
             for spec in option.fields:
@@ -599,6 +855,7 @@ class CoordinateApp:
         self.current_results = results
 
         self._update_output_fields()
+        self._update_output_height_display()
 
         lat, lon, *_ = results.get("WGS84_GEO", (0.0, 0.0, 0.0))
         self.status_text.value = (
@@ -662,29 +919,132 @@ class CoordinateApp:
             values_seq = tuple(float(v) for v in values)
         else:
             values_seq = ()
-        for index, spec in enumerate(option.fields):
-            field = self.output_fields.get(spec.name)
-            if not field:
-                continue
-            if values_seq and index < len(values_seq):
-                value = values_seq[index]
-                if spec.is_angle and spec.format_mode == "DDM":
-                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
-                    field.value = self._deg_to_ddm(value, positive, negative)
-                elif spec.is_angle and spec.format_mode == "DMS":
-                    positive, negative = ("N", "S") if spec.name == "lat" else ("E", "W")
-                    field.value = self._deg_to_dms(value, positive, negative)
-                else:
+        
+        # Handle DD/DDM/DMS formats with separate fields
+        if option.source_format in {"DD", "DDM", "DMS"} and len(values_seq) >= 2:
+            lat_value = values_seq[0]
+            lon_value = values_seq[1]
+            
+            # Populate latitude fields
+            if option.source_format == "DD":
+                lat_deg_field = self.output_fields.get("lat_deg")
+                if lat_deg_field:
+                    lat_deg_field.value = f"{abs(lat_value):.6f}"
+                lat_dir_field = self.output_fields.get("lat_dir")
+                if lat_dir_field:
+                    lat_dir_field.value = "N" if lat_value >= 0 else "S"
+            elif option.source_format == "DDM":
+                lat_deg = int(abs(lat_value))
+                lat_min = (abs(lat_value) - lat_deg) * 60.0
+                lat_deg_field = self.output_fields.get("lat_deg")
+                if lat_deg_field:
+                    lat_deg_field.value = f"{lat_deg}"
+                lat_min_field = self.output_fields.get("lat_min")
+                if lat_min_field:
+                    lat_min_field.value = f"{lat_min:.4f}"
+                lat_dir_field = self.output_fields.get("lat_dir")
+                if lat_dir_field:
+                    lat_dir_field.value = "N" if lat_value >= 0 else "S"
+            elif option.source_format == "DMS":
+                lat_deg = int(abs(lat_value))
+                lat_min_dec = (abs(lat_value) - lat_deg) * 60.0
+                lat_min = int(lat_min_dec)
+                lat_sec = (lat_min_dec - lat_min) * 60.0
+                lat_deg_field = self.output_fields.get("lat_deg")
+                if lat_deg_field:
+                    lat_deg_field.value = f"{lat_deg}"
+                lat_min_field = self.output_fields.get("lat_min")
+                if lat_min_field:
+                    lat_min_field.value = f"{lat_min}"
+                lat_sec_field = self.output_fields.get("lat_sec")
+                if lat_sec_field:
+                    lat_sec_field.value = f"{lat_sec:.1f}"
+                lat_dir_field = self.output_fields.get("lat_dir")
+                if lat_dir_field:
+                    lat_dir_field.value = "N" if lat_value >= 0 else "S"
+            
+            # Populate longitude fields
+            if option.source_format == "DD":
+                lon_deg_field = self.output_fields.get("lon_deg")
+                if lon_deg_field:
+                    lon_deg_field.value = f"{abs(lon_value):.6f}"
+                lon_dir_field = self.output_fields.get("lon_dir")
+                if lon_dir_field:
+                    lon_dir_field.value = "E" if lon_value >= 0 else "W"
+            elif option.source_format == "DDM":
+                lon_deg = int(abs(lon_value))
+                lon_min = (abs(lon_value) - lon_deg) * 60.0
+                lon_deg_field = self.output_fields.get("lon_deg")
+                if lon_deg_field:
+                    lon_deg_field.value = f"{lon_deg}"
+                lon_min_field = self.output_fields.get("lon_min")
+                if lon_min_field:
+                    lon_min_field.value = f"{lon_min:.4f}"
+                lon_dir_field = self.output_fields.get("lon_dir")
+                if lon_dir_field:
+                    lon_dir_field.value = "E" if lon_value >= 0 else "W"
+            elif option.source_format == "DMS":
+                lon_deg = int(abs(lon_value))
+                lon_min_dec = (abs(lon_value) - lon_deg) * 60.0
+                lon_min = int(lon_min_dec)
+                lon_sec = (lon_min_dec - lon_min) * 60.0
+                lon_deg_field = self.output_fields.get("lon_deg")
+                if lon_deg_field:
+                    lon_deg_field.value = f"{lon_deg}"
+                lon_min_field = self.output_fields.get("lon_min")
+                if lon_min_field:
+                    lon_min_field.value = f"{lon_min}"
+                lon_sec_field = self.output_fields.get("lon_sec")
+                if lon_sec_field:
+                    lon_sec_field.value = f"{lon_sec:.1f}"
+                lon_dir_field = self.output_fields.get("lon_dir")
+                if lon_dir_field:
+                    lon_dir_field.value = "E" if lon_value >= 0 else "W"
+        else:
+            # Legacy format for other coordinate systems
+            for index, spec in enumerate(option.fields):
+                field = self.output_fields.get(spec.name)
+                if not field:
+                    continue
+                if values_seq and index < len(values_seq):
+                    value = values_seq[index]
                     decimals = spec.decimals if not spec.is_angle else 6
                     field.value = f"{value:.{decimals}f}"
-            else:
-                field.value = ""
+                else:
+                    field.value = ""
+        
         if option.key == "MGRS":
             mgrs_value = self.current_results.get("MGRS")
             field = self.output_fields.get("mgrs")
             if field is not None:
                 field.value = str(mgrs_value or "")
         self.page.update()
+
+    def _on_map_type_change(self, event) -> None:
+        print(f"[MAP] _on_map_type_change called! Event: {event}")
+        print(f"[MAP] Current selector value: {self.map_selector.value}")
+        
+        map_type = self.map_selector.value
+        if not map_type:
+            map_type = "osm"
+        if map_type not in {"osm", "satellite", "terrain", "lantmateriet"}:
+            map_type = "osm"
+        self.map_selector.value = map_type
+        self.map_selector.update()
+        
+        print(f"[MAP] Attempting to change map type to: {map_type}, map_ready={self.map_ready}")
+        
+        # Use run_javascript method (not eval_js)
+        if hasattr(self.map_view, "run_javascript"):
+            try:
+                self.map_view.run_javascript(f"changeMapType('{map_type}');")
+                print(f"[MAP] Successfully sent changeMapType command for {map_type}")
+            except Exception as e:
+                print(f"[MAP] Error changing map type: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}")
 
 
 def main(page: ft.Page) -> None:

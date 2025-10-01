@@ -177,6 +177,7 @@ def convert_to_targets(
     canonical = to_canonical(parsed)
     lat, lon, ellipsoidal = canonical.geographic
     height_source = parsed.height
+    original_height_system = parsed.height_system
     if height_source is not None:
         if parsed.height_system == HeightSystem.RH2000:
             try:
@@ -187,7 +188,7 @@ def convert_to_targets(
                 ellipsoidal = res.height
                 canonical.geographic = (lat, lon, ellipsoidal)
                 canonical.xyz = _geodetic_to_ecef(lat, lon, ellipsoidal)
-                parsed.height = ellipsoidal
+                # Don't modify parsed.height - preserve original for height conversion
         elif parsed.height_system == HeightSystem.RFN:
             try:
                 ellipsoidal_height = height_rfn.DEFAULT_MODEL.orthometric_to_ellipsoidal(
@@ -199,7 +200,7 @@ def convert_to_targets(
                 ellipsoidal = float(ellipsoidal_height)
                 canonical.geographic = (lat, lon, ellipsoidal)
                 canonical.xyz = _geodetic_to_ecef(lat, lon, ellipsoidal)
-                parsed.height = ellipsoidal
+                # Don't modify parsed.height - preserve original for height conversion
 
     results: Dict[str, Tuple[float, ...] | str] = {}
 
@@ -215,24 +216,66 @@ def convert_to_targets(
     # Height conversion
     ellipsoidal = canonical.geographic[2]
     lat, lon = canonical.geographic[0], canonical.geographic[1]
-    height_value = parsed.height if parsed.height is not None else ellipsoidal
+    
+    # Use original height value and system for conversion
+    if height_source is not None:
+        height_value = height_source
+        height_system = original_height_system
+    else:
+        height_value = ellipsoidal
+        height_system = HeightSystem.ELLIPSOIDAL
+    
     if height_target == HeightSystem.ELLIPSOIDAL:
-        results["HEIGHT"] = (float(ellipsoidal),)
+        if height_system == HeightSystem.ELLIPSOIDAL:
+            results["HEIGHT"] = (float(height_value),)
+        elif height_system == HeightSystem.RH2000:
+            try:
+                res = height_swen17.ellipsoidal_height(lat, lon, height_value)
+                results["HEIGHT"] = (res.height,)
+            except height_swen17.GeoidUnavailableError as exc:
+                results["HEIGHT_ERROR"] = str(exc)
+        elif height_system == HeightSystem.RFN:
+            try:
+                height = height_rfn.DEFAULT_MODEL.orthometric_to_ellipsoidal(lat, lon, height_value)
+                results["HEIGHT"] = (float(height),)
+            except height_rfn.RFNHeightUnavailable as exc:
+                results["HEIGHT_ERROR"] = str(exc)
     elif height_target == HeightSystem.RH2000:
-        try:
-            res = height_swen17.orthometric_height(lat, lon, height_value)
-        except height_swen17.GeoidUnavailableError as exc:
-            results["HEIGHT_ERROR"] = str(exc)
-        else:
-            results["HEIGHT"] = (res.height,)
-            results["HEIGHT_INFO"] = (res.separation,)
+        if height_system == HeightSystem.RH2000:
+            results["HEIGHT"] = (float(height_value),)
+        elif height_system == HeightSystem.ELLIPSOIDAL:
+            try:
+                res = height_swen17.orthometric_height(lat, lon, height_value)
+                results["HEIGHT"] = (res.height,)
+                results["HEIGHT_INFO"] = (res.separation,)
+            except height_swen17.GeoidUnavailableError as exc:
+                results["HEIGHT_ERROR"] = str(exc)
+        elif height_system == HeightSystem.RFN:
+            # RFN -> Ellipsoidal -> RH2000
+            try:
+                ellipsoidal_height = height_rfn.DEFAULT_MODEL.orthometric_to_ellipsoidal(lat, lon, height_value)
+                res = height_swen17.orthometric_height(lat, lon, float(ellipsoidal_height))
+                results["HEIGHT"] = (res.height,)
+                results["HEIGHT_INFO"] = (res.separation,)
+            except (height_rfn.RFNHeightUnavailable, height_swen17.GeoidUnavailableError) as exc:
+                results["HEIGHT_ERROR"] = str(exc)
     elif height_target == HeightSystem.RFN:
-        try:
-            height = height_rfn.DEFAULT_MODEL.ellipsoidal_to_orthometric(lat, lon, height_value)
-        except height_rfn.RFNHeightUnavailable as exc:
-            results["HEIGHT_ERROR"] = str(exc)
-        else:  # pragma: no cover - future extension
-            results["HEIGHT"] = (height,)
+        if height_system == HeightSystem.RFN:
+            results["HEIGHT"] = (float(height_value),)
+        elif height_system == HeightSystem.ELLIPSOIDAL:
+            try:
+                height = height_rfn.DEFAULT_MODEL.ellipsoidal_to_orthometric(lat, lon, height_value)
+                results["HEIGHT"] = (height,)
+            except height_rfn.RFNHeightUnavailable as exc:
+                results["HEIGHT_ERROR"] = str(exc)
+        elif height_system == HeightSystem.RH2000:
+            # RH2000 -> Ellipsoidal -> RFN
+            try:
+                res = height_swen17.ellipsoidal_height(lat, lon, height_value)
+                height = height_rfn.DEFAULT_MODEL.ellipsoidal_to_orthometric(lat, lon, res.height)
+                results["HEIGHT"] = (height,)
+            except (height_swen17.GeoidUnavailableError, height_rfn.RFNHeightUnavailable) as exc:
+                results["HEIGHT_ERROR"] = str(exc)
     if canonical.warnings:
         results["WARNINGS"] = tuple(canonical.warnings)
     return results

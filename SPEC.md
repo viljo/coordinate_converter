@@ -35,8 +35,8 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - Ellipsoidal heights align with GRS80/WGS84 and are treated interchangeably in the UI.
 - RH2000 orthometric heights use the SWEN17_RH2000 geoid (GTX grid). When the grid is
   unavailable a warning is surfaced and the conversion gracefully degrades.
-- RFN height support is scaffolded for future constants. The interface exists and
-  tests mark numerical checks as xfail until constants from LMV report §3.9.3 are added.
+- RFN height support is scaffolded pending official parameters. The interface exists
+  and tests mark numerical checks as xfail until reference data is supplied.
 
 ## User Experience Requirements
 1. Desktop UI: left-hand coordinate source and height source selectors dynamically
@@ -50,6 +50,63 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 4. Status bar summarises datum/CRS, height system, and last warning.
 5. Map view centres on committed coordinates, uses configurable tile URL via
    `OSM_TILE_URL` environment variable, and shows attribution.
+
+## Map Implementation Requirements ⚠️ CRITICAL - DO NOT MODIFY
+**This section documents the WORKING map configuration. Changes to this will break the map display.**
+
+### WebView Configuration (TESTED & WORKING)
+- **MUST use `ft.WebView`** (NOT `flet_webview.WebView` or any other variant)
+- **MUST use base64-encoded data URI** to load HTML content:
+  ```python
+  import base64
+  map_html_content = (Path(__file__).resolve().parent / "map_view" / "leaflet.html").read_text()
+  map_html_b64 = base64.b64encode(map_html_content.encode('utf-8')).decode('ascii')
+  map_url = f"data:text/html;base64,{map_html_b64}"
+  ```
+- **DO NOT use `file://` URIs** - they cause CORS issues that prevent tile loading
+- **DO NOT use `flet_webview.WebView`** - it fails to render tiles properly despite being the "official" package
+
+### Leaflet HTML Structure (TESTED & WORKING)
+- **MUST use Leaflet 1.9.4** from unpkg CDN:
+  - CSS: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.css`
+  - JS: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
+- **MUST have minimal HTML structure** (see `src/app/map_view/leaflet.html`):
+  - Simple `<!DOCTYPE html>` with UTF-8 charset
+  - No complex styling, crosshairs, or overlays (they can interfere with rendering)
+  - Direct map div: `<div id="map"></div>`
+  - Full viewport sizing: `#map { height: 100vh; width: 100vw; }`
+
+### Map Type Switching (TESTED & WORKING)
+- **MUST define mapTypes object** with configurations for:
+  - `osm`: OpenStreetMap (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`)
+  - `satellite`: ArcGIS World Imagery
+  - `terrain`: OpenTopoMap
+  - `lantmateriet`: Swedish Lantmäteriet tiles
+- **MUST use `changeMapType(type)` function** that:
+  - Removes current layer before adding new one
+  - Uses `L.tileLayer()` with proper attribution and maxZoom
+  - Defaults to 'osm' if invalid type provided
+- **MUST initialize with OSM**: `changeMapType('osm');`
+- **MUST set `window.mapReady = true;`** at end of script
+
+### Map Update Mechanism (TESTED & WORKING)
+- **MUST use `updateMapCenter(lat, lon)` function** exposed on window
+- **MUST call via `run_javascript`**: `self.map_view.run_javascript(f"updateMapCenter({lat}, {lon});")`
+- **MUST check `self.map_ready` flag** before calling JavaScript functions
+- **MUST set `self.map_ready = True`** in `on_page_ended` handler
+
+### Map Type Selector UI (TESTED & WORKING)
+- **MUST have dropdown** with options: OSM, Satellite, Terrain, Lantmäteriet
+- **MUST call `changeMapType()`** via `run_javascript` on change
+- **Example**: `self.map_view.run_javascript(f"changeMapType('{map_type}');")`
+
+### What NOT to Do
+❌ Do not use `flet_webview.WebView` - causes tile rendering issues  
+❌ Do not use `file://` URLs - causes CORS blocking of tiles  
+❌ Do not add complex overlays/crosshairs in HTML - can break rendering  
+❌ Do not change Leaflet version without testing  
+❌ Do not modify the base64 encoding approach  
+❌ Do not add WebView configuration options beyond the minimal working set
 
 ## CLI Requirements
 - Command: `python -m cli.csv_convert --in in.csv --out out.csv --from <CRS_CODE> --to <CRS_CODES> [--height <HEIGHT_SYSTEM>]`.
