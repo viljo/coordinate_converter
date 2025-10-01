@@ -230,6 +230,7 @@ class CoordinateApp:
         self.page.window_width = 1400
         self.page.window_height = 900
         self.page.on_keyboard_event = self._on_page_key
+        self.input_tab_order: List[str] = []  # Ordered list of input field names for tab navigation
         self.input_coord_selector = ft.Dropdown(
             label="Input coordinate source",
             options=[
@@ -452,9 +453,13 @@ class CoordinateApp:
                 self._on_input_blur,
                 lambda e: self._on_input_change(None),
             )
+            # Set tab order: lat_dir → lat_deg → lon_dir → lon_deg (direction first)
+            self.input_tab_order = ["lat_dir", "lat_deg", "lon_dir", "lon_deg"]
             # Now set proper focus handlers with FieldSpec
             self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
+            self.input_fields["lat_dir"].on_focus = make_on_focus("lat_dir", "N/S")
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
+            self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
             
         elif option.source_format == "DDM":
             controls = ui_builder.UIBuilder.build_ddm_input_fields(
@@ -463,10 +468,14 @@ class CoordinateApp:
                 self._on_input_blur,
                 lambda e: self._on_input_change(None),
             )
+            # Set tab order: lat_dir → lat_deg → lat_min → lon_dir → lon_deg → lon_min (direction first)
+            self.input_tab_order = ["lat_dir", "lat_deg", "lat_min", "lon_dir", "lon_deg", "lon_min"]
             self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
             self.input_fields["lat_min"].on_focus = make_on_focus("lat_min", "Minutes")
+            self.input_fields["lat_dir"].on_focus = make_on_focus("lat_dir", "N/S")
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
+            self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
             
         elif option.source_format == "DMS":
             controls = ui_builder.UIBuilder.build_dms_input_fields(
@@ -475,14 +484,19 @@ class CoordinateApp:
                 self._on_input_blur,
                 lambda e: self._on_input_change(None),
             )
+            # Set tab order: lat_dir → lat_deg → lat_min → lat_sec → lon_dir → lon_deg → lon_min → lon_sec (direction first)
+            self.input_tab_order = ["lat_dir", "lat_deg", "lat_min", "lat_sec", "lon_dir", "lon_deg", "lon_min", "lon_sec"]
             self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
             self.input_fields["lat_min"].on_focus = make_on_focus("lat_min", "Minutes")
             self.input_fields["lat_sec"].on_focus = make_on_focus("lat_sec", "Seconds")
+            self.input_fields["lat_dir"].on_focus = make_on_focus("lat_dir", "N/S")
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
             self.input_fields["lon_sec"].on_focus = make_on_focus("lon_sec", "Seconds")
+            self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
         else:
             # Legacy formats (RT90, XYZ, MGRS, etc.)
+            self.input_tab_order = []
             for index, spec in enumerate(option.fields):
                 field = ft.TextField(
                     label=spec.label,
@@ -494,6 +508,7 @@ class CoordinateApp:
                     field.on_blur = self._on_input_blur
                 field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
                 self.input_fields[spec.name] = field
+                self.input_tab_order.append(spec.name)
                 controls.append(field)
         
         self.input_height_row.controls = [self.input_height_selector]
@@ -506,6 +521,8 @@ class CoordinateApp:
             )
             self.input_height_row.controls.append(self.input_height_field)
             self.input_height_row.visible = True
+            # Add height to tab order after the coordinate fields
+            self.input_tab_order.append("height")
         else:
             self.input_height_field = None
             self.input_height_row.visible = False
@@ -519,44 +536,95 @@ class CoordinateApp:
     def _populate_input_from_results(self, option: CoordinateOption) -> None:
         if not self.current_results:
             return
-        values = self.current_results.get(option.result_key)
-        if isinstance(values, str):
+        # Handle MGRS separately
+        values_any = self.current_results.get(option.result_key)
+        if isinstance(values_any, str):
             if option.key == "MGRS":
                 field = self.input_fields.get("mgrs")
                 if field is not None:
-                    field.value = values
+                    field.value = values_any
             return
-        if not values:
-            if option.key == "MGRS" and "MGRS" in self.current_results:
-                self._suspend_input_events = True
-                try:
-                    field = self.input_fields.get("mgrs")
-                    if field is not None:
-                        field.value = str(self.current_results.get("MGRS") or "")
-                finally:
-                    self._suspend_input_events = False
+        if option.key == "MGRS":
+            mgrs_value = self.current_results.get("MGRS")
+            if mgrs_value is None:
+                return
+        # Expect a sequence (lat, lon, ...)
+        if not isinstance(values_any, (list, tuple)) or len(values_any) < 2:
             return
-        if not isinstance(values, (list, tuple)):
-            return
+        lat_value = float(values_any[0])
+        lon_value = float(values_any[1])
+
         self._suspend_input_events = True
         try:
-            for index, spec in enumerate(option.fields):
-                field = self.input_fields.get(spec.name)
-                if field is None:
-                    continue
-                if index >= len(values):
-                    field.value = ""
-                    continue
-                value = float(values[index])
-                if spec.is_angle and spec.format_mode == "DDM":
-                    positive, negative = ("N", "S") if spec.name == "lat_dir" else ("E", "W")
-                    field.value = self._deg_to_ddm(value, positive, negative)
-                elif spec.is_angle and spec.format_mode == "DMS":
-                    positive, negative = ("N", "S") if spec.name == "lat_dir" else ("E", "W")
-                    field.value = self._deg_to_dms(value, positive, negative)
-                else:
-                    decimals = spec.decimals if not spec.is_angle else 6
-                    field.value = f"{value:.{decimals}f}"
+            if option.source_format == "DD":
+                lat_deg_field = self.input_fields.get("lat_deg")
+                lon_deg_field = self.input_fields.get("lon_deg")
+                lat_dir_field = self.input_fields.get("lat_dir")
+                lon_dir_field = self.input_fields.get("lon_dir")
+                if lat_deg_field:
+                    lat_deg_field.value = f"{abs(lat_value):.6f}"
+                if lon_deg_field:
+                    lon_deg_field.value = f"{abs(lon_value):.6f}"
+                if lat_dir_field:
+                    lat_dir_field.value = "N" if lat_value >= 0 else "S"
+                if lon_dir_field:
+                    lon_dir_field.value = "E" if lon_value >= 0 else "W"
+
+            elif option.source_format == "DDM":
+                # Latitude
+                lat_deg = int(abs(lat_value))
+                lat_min = (abs(lat_value) - lat_deg) * 60.0
+                lat_deg_field = self.input_fields.get("lat_deg")
+                lat_min_field = self.input_fields.get("lat_min")
+                lat_dir_field = self.input_fields.get("lat_dir")
+                if lat_deg_field:
+                    lat_deg_field.value = f"{lat_deg}"
+                if lat_min_field:
+                    lat_min_field.value = f"{lat_min:.4f}"
+                if lat_dir_field:
+                    lat_dir_field.value = "N" if lat_value >= 0 else "S"
+                # Longitude
+                lon_deg = int(abs(lon_value))
+                lon_min = (abs(lon_value) - lon_deg) * 60.0
+                lon_deg_field = self.input_fields.get("lon_deg")
+                lon_min_field = self.input_fields.get("lon_min")
+                lon_dir_field = self.input_fields.get("lon_dir")
+                if lon_deg_field:
+                    lon_deg_field.value = f"{lon_deg}"
+                if lon_min_field:
+                    lon_min_field.value = f"{lon_min:.4f}"
+                if lon_dir_field:
+                    lon_dir_field.value = "E" if lon_value >= 0 else "W"
+
+            elif option.source_format == "DMS":
+                # Latitude
+                lat_deg = int(abs(lat_value))
+                lat_min_dec = (abs(lat_value) - lat_deg) * 60.0
+                lat_min = int(lat_min_dec)
+                lat_sec = (lat_min_dec - lat_min) * 60.0
+                if (f := self.input_fields.get("lat_deg")):
+                    f.value = f"{lat_deg}"
+                if (f := self.input_fields.get("lat_min")):
+                    f.value = f"{lat_min}"
+                if (f := self.input_fields.get("lat_sec")):
+                    f.value = f"{lat_sec:.1f}"
+                if (f := self.input_fields.get("lat_dir")):
+                    f.value = "N" if lat_value >= 0 else "S"
+                # Longitude
+                lon_deg = int(abs(lon_value))
+                lon_min_dec = (abs(lon_value) - lon_deg) * 60.0
+                lon_min = int(lon_min_dec)
+                lon_sec = (lon_min_dec - lon_min) * 60.0
+                if (f := self.input_fields.get("lon_deg")):
+                    f.value = f"{lon_deg}"
+                if (f := self.input_fields.get("lon_min")):
+                    f.value = f"{lon_min}"
+                if (f := self.input_fields.get("lon_sec")):
+                    f.value = f"{lon_sec:.1f}"
+                if (f := self.input_fields.get("lon_dir")):
+                    f.value = "E" if lon_value >= 0 else "W"
+
+            # Populate height if present
             if option.separate_height and self.input_height_field is not None:
                 height_values = self.current_results.get("HEIGHT")
                 if isinstance(height_values, (list, tuple)) and height_values:
@@ -910,6 +978,42 @@ class CoordinateApp:
         self.page.update()
 
     def _on_page_key(self, event: ft.KeyboardEvent) -> None:
+        # Handle Tab and Enter keys for custom tab order (right then down, skip output fields)
+        if (event.key == "Tab" and not event.shift) or event.key == "Enter":
+            if self.focused_field and self.focused_field in self.input_tab_order:
+                try:
+                    current_idx = self.input_tab_order.index(self.focused_field)
+                    next_idx = (current_idx + 1) % len(self.input_tab_order)
+                    next_field_name = self.input_tab_order[next_idx]
+                    next_field = self.input_fields.get(next_field_name)
+                    if not next_field and next_field_name == "height":
+                        next_field = self.input_height_field
+                    if next_field:
+                        next_field.focus()
+                        event.page.update()
+                        # Prevent default tab behavior
+                        return
+                except (ValueError, AttributeError):
+                    pass
+        
+        # Handle Shift+Tab for reverse tab order
+        if event.key == "Tab" and event.shift:
+            if self.focused_field and self.focused_field in self.input_tab_order:
+                try:
+                    current_idx = self.input_tab_order.index(self.focused_field)
+                    prev_idx = (current_idx - 1) % len(self.input_tab_order)
+                    prev_field_name = self.input_tab_order[prev_idx]
+                    prev_field = self.input_fields.get(prev_field_name)
+                    if not prev_field and prev_field_name == "height":
+                        prev_field = self.input_height_field
+                    if prev_field:
+                        prev_field.focus()
+                        event.page.update()
+                        return
+                except (ValueError, AttributeError):
+                    pass
+        
+        # Handle arrow keys for increment/decrement
         if self.focused_field is None or event.key not in ("ArrowUp", "ArrowDown"):
             return
         field = self.input_fields.get(self.focused_field)

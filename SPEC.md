@@ -51,8 +51,94 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 5. Map view centres on committed coordinates, uses configurable tile URL via
    `OSM_TILE_URL` environment variable, and shows attribution.
 
+## UI Field Layout and Behavior Requirements ⚠️ CRITICAL - DO NOT MODIFY
+**This section documents the WORKING UI configuration. Changes to this will break the user experience.**
+
+### Field Dimensions (TESTED & WORKING)
+- **Coordinate fields (degrees/minutes/seconds)**: 159px width
+  - Applies to: DD, DDM, DMS latitude/longitude fields
+  - Applies to: RT90 easting/northing fields (same width as DD)
+  - Field width MUST accommodate maximum coordinate value with required precision (see Accuracy Requirements)
+- **Direction fields (N/S, E/W)**: 60px width
+- **Height field**: 108px width
+  - Height field MUST be present for ALL coordinate types EXCEPT geocentric (WGS84_XYZ, RR92_XYZ)
+
+### Coordinate Accuracy Requirements (CRITICAL)
+- **Maximum accuracy**: ±2.5cm (0.025m)
+- **Round finer coordinates** to meet accuracy requirement
+- **Decimal precision by format**:
+  - **DD (Decimal Degrees)**: 7 decimal places (±1.1cm at equator)
+    - Latitude: max "90.1234567" (10 chars)
+    - Longitude: max "180.1234567" (11 chars)
+  - **DDM (Degrees Decimal Minutes)**: 5 decimal places in minutes (±1.4cm at equator)
+    - Degrees: max "90" or "180" (2-3 chars)
+    - Minutes: max "59.12345" (8 chars)
+  - **DMS (Degrees Minutes Seconds)**: 3 decimal places in seconds (±3.1cm at equator)
+    - Degrees: max "90" or "180" (2-3 chars)
+    - Minutes: max "59" (2 chars)
+    - Seconds: max "59.123" (6 chars)
+  - **RT90/Projected meters**: 2 decimal places (±2.5cm)
+    - Max "7654321.12" (10 chars)
+  - **Height (meters)**: 2 decimal places (±2.5cm)
+    - Max "12345.12" (8 chars)
+- **Field sizing**: Text field width MUST exactly fit maximum allowed coordinate with precision
+- **Accuracy display**: Show current accuracy to the right of coordinate display, outside the box
+  - Format: "accuracy: <newline> X.Xm" (e.g., "accuracy: ↵ 0.4m")
+  - Display dynamically based on actual input precision
+
+### Field Order and Layout (TESTED & WORKING)
+- **Direction fields MUST appear first** in each row:
+  - DD format: `[N/S] [Lat Degrees]` then `[E/W] [Lon Degrees]`
+  - DDM format: `[N/S] [Lat Degrees] [Lat Minutes]` then `[E/W] [Lon Degrees] [Lon Minutes]`
+  - DMS format: `[N/S] [Lat Degrees] [Lat Minutes] [Lat Seconds]` then `[E/W] [Lon Degrees] [Lon Minutes] [Lon Seconds]`
+- **Row labels MUST appear above fields**: "Latitude:" and "Longitude:" as separate text widgets above each row
+- **Field labels MUST be on TextField borders**: Never use hint_text or placeholders inside boxes
+- **Direction field labels**: MUST be exactly "N/S" or "E/W" (NOT "Lat N/S", "Lon N/S", "Lat E/W", "Lon E/W")
+- **Coordinate field labels**: Should indicate component type and axis:
+  - Latitude fields: "Lat Degrees", "Lat Minutes", "Lat Seconds"
+  - Longitude fields: "Lon Degrees", "Lon Minutes", "Lon Seconds"
+- **Boxes start empty**: Except direction fields which default to "N" and "E"
+
+### Tab Order (TESTED & WORKING)
+- **Tab and Enter keys** move to the next field in custom order (not default Flet order)
+- **Order MUST be horizontal first, then vertical** (left-to-right, then top-to-bottom):
+  - DD: `lat_dir → lat_deg → lon_dir → lon_deg → height (if present)`
+  - DDM: `lat_dir → lat_deg → lat_min → lon_dir → lon_deg → lon_min → height (if present)`
+  - DMS: `lat_dir → lat_deg → lat_min → lat_sec → lon_dir → lon_deg → lon_min → lon_sec → height (if present)`
+- **Shift+Tab** reverses the order
+- **Read-only output fields** are completely skipped in tab order
+
+### Output Field Styling (TESTED & WORKING)
+- **All read-only output fields MUST be bold**: `text_style=ft.TextStyle(weight=ft.FontWeight.BOLD)`
+- Same field order as input (direction first)
+- Same labels on borders (never placeholders)
+
+### Key Navigation Implementation
+- Implemented in `_on_page_key()` method in `main.py`
+- Uses `input_tab_order` list to track custom sequence
+- Calls `field.focus()` programmatically to override default Flet behavior
+- Handles both Tab/Enter (forward) and Shift+Tab (backward)
+
 ## Map Implementation Requirements ⚠️ CRITICAL - DO NOT MODIFY
 **This section documents the WORKING map configuration. Changes to this will break the map display.**
+
+### Map Type Configuration (TESTED & WORKING)
+- **Default map type**: Terrain (OpenTopoMap)
+- **Available map types**: OSM, Satellite, Terrain
+- **Removed**: Lantmäteriet (removed from dropdown and HTML)
+- **Map initializes with**: `changeMapType('terrain')` on page load
+
+### Click-to-Select Coordinates (TESTED & WORKING)
+- Clicking map emits console message: `{type: 'map_click', lat: X, lon: Y}`
+- Console message handler in `main.py` parses lat/lon
+- Automatically switches input to WGS84 DD format if not already DD
+- Populates lat_deg, lon_deg, lat_dir, lon_dir fields
+- Triggers conversion and map re-center
+
+### Map Center Behavior (TESTED & WORKING)
+- Map centers immediately when input coordinates change
+- Map centers on click when user selects coordinate from map
+- Uses `updateMapCenter(lat, lon)` JavaScript function via `run_javascript()`
 
 ### WebView Configuration (TESTED & WORKING)
 - **MUST use `ft.WebView`** (NOT `flet_webview.WebView` or any other variant)
@@ -84,9 +170,10 @@ EPSG:4326 (geographic) to minimise repeated Transformer instantiation.
 - **MUST use `changeMapType(type)` function** that:
   - Removes current layer before adding new one
   - Uses `L.tileLayer()` with proper attribution and maxZoom
-  - Defaults to 'osm' if invalid type provided
-- **MUST initialize with OSM**: `changeMapType('osm');`
+  - Defaults to 'terrain' if invalid type provided
+- **MUST initialize with Terrain**: `changeMapType('terrain');`
 - **MUST set `window.mapReady = true;`** at end of script
+- **MUST emit click events**: `map.on('click', ...)` emits console messages for coordinate selection
 
 ### Map Update Mechanism (TESTED & WORKING)
 - **MUST use `updateMapCenter(lat, lon)` function** exposed on window

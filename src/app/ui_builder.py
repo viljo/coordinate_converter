@@ -34,15 +34,16 @@ class UIBuilder:
     """
     
     # Field widths per specification
-    COORD_FIELD_WIDTH = 80
-    DIRECTION_FIELD_WIDTH = 80
-    HEIGHT_FIELD_WIDTH = 180
+    COORD_FIELD_WIDTH = 159  # DD boxes increased by 50%
+    DIRECTION_FIELD_WIDTH = 60
+    HEIGHT_FIELD_WIDTH = 108  # Reduced by 40%
     
     @staticmethod
     def create_coordinate_field(
         label: str,
         name: str,
         autofocus: bool = False,
+        read_only: bool = False,
         on_focus: Optional[Callable] = None,
         on_blur: Optional[Callable] = None,
         on_change: Optional[Callable] = None,
@@ -52,7 +53,7 @@ class UIBuilder:
         
         Per specification:
         - Label in frame (outside box)
-        - Width: 80px
+        - Width: 159px
         - Box starts empty
         - NO hint_text
         """
@@ -60,7 +61,10 @@ class UIBuilder:
             label=label,  # MUST have label
             width=UIBuilder.COORD_FIELD_WIDTH,
             autofocus=autofocus,
+            read_only=read_only,
         )
+        if read_only:
+            field.text_style = ft.TextStyle(weight=ft.FontWeight.BOLD)
         if on_focus:
             field.on_focus = on_focus
         if on_blur:
@@ -74,6 +78,7 @@ class UIBuilder:
         label: str,
         name: str,
         default_value: str,
+        read_only: bool = False,
         on_change: Optional[Callable] = None,
     ) -> ft.TextField:
         """
@@ -81,7 +86,7 @@ class UIBuilder:
         
         Per specification:
         - Label in frame: "N/S" or "E/W"
-        - Width: 80px
+        - Width: 60px
         - Default value: "N" or "E"
         - Center-aligned text
         - NO hint_text
@@ -91,7 +96,10 @@ class UIBuilder:
             value=default_value,
             width=UIBuilder.DIRECTION_FIELD_WIDTH,
             text_align=ft.TextAlign.CENTER,
+            read_only=read_only,
         )
+        if read_only:
+            field.text_style = ft.TextStyle(weight=ft.FontWeight.BOLD)
         if on_change:
             field.on_change = on_change
         return field
@@ -133,22 +141,27 @@ class UIBuilder:
         spacing: int = 8,
     ) -> Tuple[ft.Text, ft.Row]:
         """
-        Create a coordinate row (Latitude or Longitude).
+        Create a coordinate row with label above.
         
         Per specification:
-        - Row label: "Latitude:" or "Longitude:"
+        - Row label: "Latitude:" or "Longitude:" above the fields
         - Fields arranged horizontally (tab goes right)
         - Spacing: 8px between fields
+        - All field labels on TextField borders
         
         Returns:
             Tuple of (label_widget, row_widget)
         """
+        # Ensure tab order is the same as fields list and skip read-only by disabling focus
+        for f in fields:
+            if isinstance(f, ft.TextField) and f.read_only:
+                f.can_reveal_password = False  # no-op; maintain editability flags
+                try:
+                    setattr(f, "focusable", False)
+                except Exception:
+                    pass
         label_widget = ft.Text(label, style=ft.TextThemeStyle.BODY_MEDIUM)
-        row_widget = ft.Row(
-            controls=fields,
-            spacing=spacing,
-            alignment=ft.MainAxisAlignment.START,
-        )
+        row_widget = ft.Row(controls=fields, spacing=spacing, alignment=ft.MainAxisAlignment.START)
         return label_widget, row_widget
     
     @staticmethod
@@ -162,45 +175,41 @@ class UIBuilder:
         Build DD format input fields.
         
         Structure:
-        - Latitude: [Degrees] [N/S]
-        - Longitude: [Degrees] [E/W]
+        - Latitude: [N/S] [Lat Degrees]
+        - Longitude: [E/W] [Lon Degrees]
         
         Tab order: lat_deg → lat_dir → lon_deg → lon_dir
         """
         controls = []
         
-        # Latitude row
-        lat_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lat_deg", autofocus=True,
-            on_focus=on_focus, on_blur=on_blur, on_change=on_change
-        )
+        # Latitude row: N/S first, then degrees
         lat_dir = UIBuilder.create_direction_field(
-            "N/S", "lat_dir", "N", on_change=on_change
+            "Lat N/S", "lat_dir", "N", on_change=on_change
+        )
+        lat_deg = UIBuilder.create_coordinate_field(
+            "Lat Degrees", "lat_deg", autofocus=True,
+            on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
         field_registry["lat_deg"] = lat_deg
         field_registry["lat_dir"] = lat_dir
         
-        lat_label, lat_row = UIBuilder.create_coordinate_row(
-            [lat_deg, lat_dir], "Latitude:"
-        )
+        lat_label, lat_row = UIBuilder.create_coordinate_row([lat_dir, lat_deg], "Latitude:")
         controls.extend([lat_label, lat_row])
         
-        # Longitude row
-        lon_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lon_deg",
-            on_focus=on_focus, on_blur=on_blur, on_change=on_change
-        )
+        # Longitude row: E/W first, then degrees
         lon_dir = UIBuilder.create_direction_field(
-            "E/W", "lon_dir", "E", on_change=on_change
+            "Lon E/W", "lon_dir", "E", on_change=on_change
+        )
+        lon_deg = UIBuilder.create_coordinate_field(
+            "Lon Degrees", "lon_deg",
+            on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
         field_registry["lon_deg"] = lon_deg
         field_registry["lon_dir"] = lon_dir
         
-        lon_label, lon_row = UIBuilder.create_coordinate_row(
-            [lon_deg, lon_dir], "Longitude:"
-        )
+        lon_label, lon_row = UIBuilder.create_coordinate_row([lon_dir, lon_deg], "Longitude:")
         controls.extend([lon_label, lon_row])
         
         return controls
@@ -216,55 +225,51 @@ class UIBuilder:
         Build DDM format input fields.
         
         Structure:
-        - Latitude: [Degrees] [Minutes] [N/S]
-        - Longitude: [Degrees] [Minutes] [E/W]
+        - Latitude: [N/S] [Lat Degrees] [Lat Minutes]
+        - Longitude: [E/W] [Lon Degrees] [Lon Minutes]
         
         Tab order: lat_deg → lat_min → lat_dir → lon_deg → lon_min → lon_dir
         """
         controls = []
         
-        # Latitude row
+        # Latitude row: N/S first, then degrees, then minutes
+        lat_dir = UIBuilder.create_direction_field(
+            "Lat N/S", "lat_dir", "N", on_change=on_change
+        )
         lat_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lat_deg", autofocus=True,
+            "Lat Degrees", "lat_deg", autofocus=True,
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lat_min = UIBuilder.create_coordinate_field(
-            "Minutes", "lat_min",
+            "Lat Minutes", "lat_min",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
-        )
-        lat_dir = UIBuilder.create_direction_field(
-            "N/S", "lat_dir", "N", on_change=on_change
         )
         
         field_registry["lat_deg"] = lat_deg
         field_registry["lat_min"] = lat_min
         field_registry["lat_dir"] = lat_dir
         
-        lat_label, lat_row = UIBuilder.create_coordinate_row(
-            [lat_deg, lat_min, lat_dir], "Latitude:"
-        )
+        lat_label, lat_row = UIBuilder.create_coordinate_row([lat_dir, lat_deg, lat_min], "Latitude:")
         controls.extend([lat_label, lat_row])
         
-        # Longitude row
+        # Longitude row: E/W first, then degrees, then minutes
+        lon_dir = UIBuilder.create_direction_field(
+            "Lon E/W", "lon_dir", "E", on_change=on_change
+        )
         lon_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lon_deg",
+            "Lon Degrees", "lon_deg",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lon_min = UIBuilder.create_coordinate_field(
-            "Minutes", "lon_min",
+            "Lon Minutes", "lon_min",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
-        )
-        lon_dir = UIBuilder.create_direction_field(
-            "E/W", "lon_dir", "E", on_change=on_change
         )
         
         field_registry["lon_deg"] = lon_deg
         field_registry["lon_min"] = lon_min
         field_registry["lon_dir"] = lon_dir
         
-        lon_label, lon_row = UIBuilder.create_coordinate_row(
-            [lon_deg, lon_min, lon_dir], "Longitude:"
-        )
+        lon_label, lon_row = UIBuilder.create_coordinate_row([lon_dir, lon_deg, lon_min], "Longitude:")
         controls.extend([lon_label, lon_row])
         
         return controls
@@ -280,28 +285,28 @@ class UIBuilder:
         Build DMS format input fields.
         
         Structure:
-        - Latitude: [Degrees] [Minutes] [Seconds] [N/S]
-        - Longitude: [Degrees] [Minutes] [Seconds] [E/W]
+        - Latitude: [N/S] [Lat Degrees] [Lat Minutes] [Lat Seconds]
+        - Longitude: [E/W] [Lon Degrees] [Lon Minutes] [Lon Seconds]
         
         Tab order: lat_deg → lat_min → lat_sec → lat_dir → lon_deg → lon_min → lon_sec → lon_dir
         """
         controls = []
         
-        # Latitude row
+        # Latitude row: N/S first, then degrees, minutes, seconds
+        lat_dir = UIBuilder.create_direction_field(
+            "Lat N/S", "lat_dir", "N", on_change=on_change
+        )
         lat_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lat_deg", autofocus=True,
+            "Lat Degrees", "lat_deg", autofocus=True,
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lat_min = UIBuilder.create_coordinate_field(
-            "Minutes", "lat_min",
+            "Lat Minutes", "lat_min",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lat_sec = UIBuilder.create_coordinate_field(
-            "Seconds", "lat_sec",
+            "Lat Seconds", "lat_sec",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
-        )
-        lat_dir = UIBuilder.create_direction_field(
-            "N/S", "lat_dir", "N", on_change=on_change
         )
         
         field_registry["lat_deg"] = lat_deg
@@ -309,26 +314,24 @@ class UIBuilder:
         field_registry["lat_sec"] = lat_sec
         field_registry["lat_dir"] = lat_dir
         
-        lat_label, lat_row = UIBuilder.create_coordinate_row(
-            [lat_deg, lat_min, lat_sec, lat_dir], "Latitude:"
-        )
+        lat_label, lat_row = UIBuilder.create_coordinate_row([lat_dir, lat_deg, lat_min, lat_sec], "Latitude:")
         controls.extend([lat_label, lat_row])
         
-        # Longitude row
+        # Longitude row: E/W first, then degrees, minutes, seconds
+        lon_dir = UIBuilder.create_direction_field(
+            "Lon E/W", "lon_dir", "E", on_change=on_change
+        )
         lon_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lon_deg",
+            "Lon Degrees", "lon_deg",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lon_min = UIBuilder.create_coordinate_field(
-            "Minutes", "lon_min",
+            "Lon Minutes", "lon_min",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lon_sec = UIBuilder.create_coordinate_field(
-            "Seconds", "lon_sec",
+            "Lon Seconds", "lon_sec",
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
-        )
-        lon_dir = UIBuilder.create_direction_field(
-            "E/W", "lon_dir", "E", on_change=on_change
         )
         
         field_registry["lon_deg"] = lon_deg
@@ -336,9 +339,7 @@ class UIBuilder:
         field_registry["lon_sec"] = lon_sec
         field_registry["lon_dir"] = lon_dir
         
-        lon_label, lon_row = UIBuilder.create_coordinate_row(
-            [lon_deg, lon_min, lon_sec, lon_dir], "Longitude:"
-        )
+        lon_label, lon_row = UIBuilder.create_coordinate_row([lon_dir, lon_deg, lon_min, lon_sec], "Longitude:")
         controls.extend([lon_label, lon_row])
         
         return controls
@@ -350,40 +351,32 @@ class UIBuilder:
         """Build DD format output fields (read-only)."""
         controls = []
         
-        # Latitude row
-        lat_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lat_deg"
-        )
-        lat_deg.read_only = True
+        # Latitude row: N/S first, then degrees
         lat_dir = UIBuilder.create_direction_field(
-            "N/S", "lat_dir", ""
+            "Lat N/S", "lat_dir", "", read_only=True
         )
-        lat_dir.read_only = True
+        lat_deg = UIBuilder.create_coordinate_field(
+            "Lat Degrees", "lat_deg", read_only=True
+        )
         
         field_registry["lat_deg"] = lat_deg
         field_registry["lat_dir"] = lat_dir
         
-        lat_label, lat_row = UIBuilder.create_coordinate_row(
-            [lat_deg, lat_dir], "Latitude:"
-        )
+        lat_label, lat_row = UIBuilder.create_coordinate_row([lat_dir, lat_deg], "Latitude:")
         controls.extend([lat_label, lat_row])
         
-        # Longitude row
-        lon_deg = UIBuilder.create_coordinate_field(
-            "Degrees", "lon_deg"
-        )
-        lon_deg.read_only = True
+        # Longitude row: E/W first, then degrees
         lon_dir = UIBuilder.create_direction_field(
-            "E/W", "lon_dir", ""
+            "Lon E/W", "lon_dir", "", read_only=True
         )
-        lon_dir.read_only = True
+        lon_deg = UIBuilder.create_coordinate_field(
+            "Lon Degrees", "lon_deg", read_only=True
+        )
         
         field_registry["lon_deg"] = lon_deg
         field_registry["lon_dir"] = lon_dir
         
-        lon_label, lon_row = UIBuilder.create_coordinate_row(
-            [lon_deg, lon_dir], "Longitude:"
-        )
+        lon_label, lon_row = UIBuilder.create_coordinate_row([lon_dir, lon_deg], "Longitude:")
         controls.extend([lon_label, lon_row])
         
         return controls
@@ -395,38 +388,28 @@ class UIBuilder:
         """Build DDM format output fields (read-only)."""
         controls = []
         
-        # Latitude row
-        lat_deg = UIBuilder.create_coordinate_field("Degrees", "lat_deg")
-        lat_deg.read_only = True
-        lat_min = UIBuilder.create_coordinate_field("Minutes", "lat_min")
-        lat_min.read_only = True
-        lat_dir = UIBuilder.create_direction_field("N/S", "lat_dir", "")
-        lat_dir.read_only = True
+        # Latitude row: N/S first, then degrees, minutes
+        lat_dir = UIBuilder.create_direction_field("Lat N/S", "lat_dir", "", read_only=True)
+        lat_deg = UIBuilder.create_coordinate_field("Lat Degrees", "lat_deg", read_only=True)
+        lat_min = UIBuilder.create_coordinate_field("Lat Minutes", "lat_min", read_only=True)
         
         field_registry["lat_deg"] = lat_deg
         field_registry["lat_min"] = lat_min
         field_registry["lat_dir"] = lat_dir
         
-        lat_label, lat_row = UIBuilder.create_coordinate_row(
-            [lat_deg, lat_min, lat_dir], "Latitude:"
-        )
+        lat_label, lat_row = UIBuilder.create_coordinate_row([lat_dir, lat_deg, lat_min], "Latitude:")
         controls.extend([lat_label, lat_row])
         
-        # Longitude row
-        lon_deg = UIBuilder.create_coordinate_field("Degrees", "lon_deg")
-        lon_deg.read_only = True
-        lon_min = UIBuilder.create_coordinate_field("Minutes", "lon_min")
-        lon_min.read_only = True
-        lon_dir = UIBuilder.create_direction_field("E/W", "lon_dir", "")
-        lon_dir.read_only = True
+        # Longitude row: E/W first, then degrees, minutes
+        lon_dir = UIBuilder.create_direction_field("Lon E/W", "lon_dir", "", read_only=True)
+        lon_deg = UIBuilder.create_coordinate_field("Lon Degrees", "lon_deg", read_only=True)
+        lon_min = UIBuilder.create_coordinate_field("Lon Minutes", "lon_min", read_only=True)
         
         field_registry["lon_deg"] = lon_deg
         field_registry["lon_min"] = lon_min
         field_registry["lon_dir"] = lon_dir
         
-        lon_label, lon_row = UIBuilder.create_coordinate_row(
-            [lon_deg, lon_min, lon_dir], "Longitude:"
-        )
+        lon_label, lon_row = UIBuilder.create_coordinate_row([lon_dir, lon_deg, lon_min], "Longitude:")
         controls.extend([lon_label, lon_row])
         
         return controls
@@ -438,44 +421,32 @@ class UIBuilder:
         """Build DMS format output fields (read-only)."""
         controls = []
         
-        # Latitude row
-        lat_deg = UIBuilder.create_coordinate_field("Degrees", "lat_deg")
-        lat_deg.read_only = True
-        lat_min = UIBuilder.create_coordinate_field("Minutes", "lat_min")
-        lat_min.read_only = True
-        lat_sec = UIBuilder.create_coordinate_field("Seconds", "lat_sec")
-        lat_sec.read_only = True
-        lat_dir = UIBuilder.create_direction_field("N/S", "lat_dir", "")
-        lat_dir.read_only = True
+        # Latitude row: N/S first, then degrees, minutes, seconds
+        lat_dir = UIBuilder.create_direction_field("Lat N/S", "lat_dir", "", read_only=True)
+        lat_deg = UIBuilder.create_coordinate_field("Lat Degrees", "lat_deg", read_only=True)
+        lat_min = UIBuilder.create_coordinate_field("Lat Minutes", "lat_min", read_only=True)
+        lat_sec = UIBuilder.create_coordinate_field("Lat Seconds", "lat_sec", read_only=True)
         
         field_registry["lat_deg"] = lat_deg
         field_registry["lat_min"] = lat_min
         field_registry["lat_sec"] = lat_sec
         field_registry["lat_dir"] = lat_dir
         
-        lat_label, lat_row = UIBuilder.create_coordinate_row(
-            [lat_deg, lat_min, lat_sec, lat_dir], "Latitude:"
-        )
+        lat_label, lat_row = UIBuilder.create_coordinate_row([lat_dir, lat_deg, lat_min, lat_sec], "Latitude:")
         controls.extend([lat_label, lat_row])
         
-        # Longitude row
-        lon_deg = UIBuilder.create_coordinate_field("Degrees", "lon_deg")
-        lon_deg.read_only = True
-        lon_min = UIBuilder.create_coordinate_field("Minutes", "lon_min")
-        lon_min.read_only = True
-        lon_sec = UIBuilder.create_coordinate_field("Seconds", "lon_sec")
-        lon_sec.read_only = True
-        lon_dir = UIBuilder.create_direction_field("E/W", "lon_dir", "")
-        lon_dir.read_only = True
+        # Longitude row: E/W first, then degrees, minutes, seconds
+        lon_dir = UIBuilder.create_direction_field("Lon E/W", "lon_dir", "", read_only=True)
+        lon_deg = UIBuilder.create_coordinate_field("Lon Degrees", "lon_deg", read_only=True)
+        lon_min = UIBuilder.create_coordinate_field("Lon Minutes", "lon_min", read_only=True)
+        lon_sec = UIBuilder.create_coordinate_field("Lon Seconds", "lon_sec", read_only=True)
         
         field_registry["lon_deg"] = lon_deg
         field_registry["lon_min"] = lon_min
         field_registry["lon_sec"] = lon_sec
         field_registry["lon_dir"] = lon_dir
         
-        lon_label, lon_row = UIBuilder.create_coordinate_row(
-            [lon_deg, lon_min, lon_sec, lon_dir], "Longitude:"
-        )
+        lon_label, lon_row = UIBuilder.create_coordinate_row([lon_dir, lon_deg, lon_min, lon_sec], "Longitude:")
         controls.extend([lon_label, lon_row])
         
         return controls
