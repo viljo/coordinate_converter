@@ -228,7 +228,7 @@ class CoordinateApp:
         self.page.title = "Coordinate Converter"
         self.page.padding = 16
         self.page.theme_mode = ft.ThemeMode.SYSTEM
-        self.page.window_width = 1400
+        self.page.window_width = 1280
         self.page.window_height = 900
         self.page.on_keyboard_event = self._on_page_key
         self.input_tab_order: List[str] = []  # Ordered list of input field names for tab navigation
@@ -281,6 +281,8 @@ class CoordinateApp:
             label=HEIGHT_LABEL,
             read_only=True,
             helper_text="",
+            width=ui_builder.UIBuilder.HEIGHT_FIELD_WIDTH,
+            text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
         )
         self.output_height_row = ft.Row(
             controls=[self.output_height_selector, self.output_height_field],

@@ -33,10 +33,38 @@ class UIBuilder:
     4. Consistent widths: 80px (coords/dirs), 180px (height)
     """
     
-    # Field widths per specification
-    COORD_FIELD_WIDTH = 159  # DD boxes increased by 50%
+    # Direction field fixed width (compact)
     DIRECTION_FIELD_WIDTH = 60
-    HEIGHT_FIELD_WIDTH = 108  # Reduced by 40%
+
+    # Character-based sizing model (approximate monospace width)
+    CHAR_PIXEL_WIDTH = 9
+    FIELD_PADDING_PX = 24
+
+    @staticmethod
+    def width_for_chars(char_count: int) -> int:
+        return UIBuilder.FIELD_PADDING_PX + char_count * UIBuilder.CHAR_PIXEL_WIDTH
+
+    # Character counts to satisfy ±2.5 cm accuracy
+    # DD (decimal degrees)
+    DD_LAT_CHARS = 10  # e.g., 90.1234567
+    DD_LON_CHARS = 11  # e.g., 180.1234567
+    # DDM (degrees & decimal minutes)
+    DDM_DEG_LAT_CHARS = 2   # 90
+    DDM_DEG_LON_CHARS = 3   # 180
+    DDM_MIN_CHARS = 8       # 59.12345
+    # DMS (degrees / minutes / seconds)
+    DMS_DEG_LAT_CHARS = 2
+    DMS_DEG_LON_CHARS = 3
+    DMS_MIN_CHARS = 2
+    DMS_SEC_CHARS = 6       # 59.123
+    # Projected meters (e.g., RT90), 2 dp
+    PROJECTED_CHARS = 10    # 7654321.12
+    # Height meters, 2 dp
+    HEIGHT_CHARS = 8        # 12345.12
+
+    # Fallback constants (used where precise context not known)
+    COORD_FIELD_WIDTH = 159
+    HEIGHT_FIELD_WIDTH = 108
     
     @staticmethod
     def create_coordinate_field(
@@ -44,6 +72,7 @@ class UIBuilder:
         name: str,
         autofocus: bool = False,
         read_only: bool = False,
+        width: Optional[int] = None,
         on_focus: Optional[Callable] = None,
         on_blur: Optional[Callable] = None,
         on_change: Optional[Callable] = None,
@@ -59,7 +88,7 @@ class UIBuilder:
         """
         field = ft.TextField(
             label=label,  # MUST have label
-            width=UIBuilder.COORD_FIELD_WIDTH,
+            width=width if width is not None else UIBuilder.COORD_FIELD_WIDTH,
             autofocus=autofocus,
             read_only=read_only,
         )
@@ -122,7 +151,7 @@ class UIBuilder:
         """
         field = ft.TextField(
             label="Height (m)",  # MUST have label
-            width=UIBuilder.HEIGHT_FIELD_WIDTH,
+            width=UIBuilder.width_for_chars(UIBuilder.HEIGHT_CHARS),
             read_only=read_only,
             helper_text="",
         )
@@ -186,8 +215,10 @@ class UIBuilder:
         lat_dir = UIBuilder.create_direction_field(
             "N/S", "lat_dir", "N", on_change=on_change
         )
+        # Use longitude width to keep lat/lon identical per variable type
         lat_deg = UIBuilder.create_coordinate_field(
-            "Lat Degrees", "lat_deg", autofocus=True,
+            "deg", "lat_deg", autofocus=True,
+            width=UIBuilder.width_for_chars(UIBuilder.DD_LON_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
@@ -202,7 +233,8 @@ class UIBuilder:
             "E/W", "lon_dir", "E", on_change=on_change
         )
         lon_deg = UIBuilder.create_coordinate_field(
-            "Lon Degrees", "lon_deg",
+            "deg", "lon_deg",
+            width=UIBuilder.width_for_chars(UIBuilder.DD_LON_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
@@ -236,12 +268,15 @@ class UIBuilder:
         lat_dir = UIBuilder.create_direction_field(
             "N/S", "lat_dir", "N", on_change=on_change
         )
+        # Match longitude degrees width
         lat_deg = UIBuilder.create_coordinate_field(
-            "Lat Degrees", "lat_deg", autofocus=True,
+            "deg", "lat_deg", autofocus=True,
+            width=UIBuilder.width_for_chars(UIBuilder.DDM_DEG_LON_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lat_min = UIBuilder.create_coordinate_field(
-            "Lat Minutes", "lat_min",
+            "min", "lat_min",
+            width=UIBuilder.width_for_chars(UIBuilder.DDM_MIN_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
@@ -257,11 +292,13 @@ class UIBuilder:
             "E/W", "lon_dir", "E", on_change=on_change
         )
         lon_deg = UIBuilder.create_coordinate_field(
-            "Lon Degrees", "lon_deg",
+            "deg", "lon_deg",
+            width=UIBuilder.width_for_chars(UIBuilder.DDM_DEG_LON_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lon_min = UIBuilder.create_coordinate_field(
-            "Lon Minutes", "lon_min",
+            "min", "lon_min",
+            width=UIBuilder.width_for_chars(UIBuilder.DDM_MIN_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
@@ -296,16 +333,20 @@ class UIBuilder:
         lat_dir = UIBuilder.create_direction_field(
             "N/S", "lat_dir", "N", on_change=on_change
         )
+        # Match longitude degrees width
         lat_deg = UIBuilder.create_coordinate_field(
-            "Lat Degrees", "lat_deg", autofocus=True,
+            "deg", "lat_deg", autofocus=True,
+            width=UIBuilder.width_for_chars(UIBuilder.DMS_DEG_LON_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lat_min = UIBuilder.create_coordinate_field(
-            "Lat Minutes", "lat_min",
+            "min", "lat_min",
+            width=UIBuilder.width_for_chars(UIBuilder.DMS_MIN_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lat_sec = UIBuilder.create_coordinate_field(
-            "Lat Seconds", "lat_sec",
+            "sec", "lat_sec",
+            width=UIBuilder.width_for_chars(UIBuilder.DMS_SEC_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
@@ -322,15 +363,18 @@ class UIBuilder:
             "E/W", "lon_dir", "E", on_change=on_change
         )
         lon_deg = UIBuilder.create_coordinate_field(
-            "Lon Degrees", "lon_deg",
+            "deg", "lon_deg",
+            width=UIBuilder.width_for_chars(UIBuilder.DMS_DEG_LON_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lon_min = UIBuilder.create_coordinate_field(
-            "Lon Minutes", "lon_min",
+            "min", "lon_min",
+            width=UIBuilder.width_for_chars(UIBuilder.DMS_MIN_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         lon_sec = UIBuilder.create_coordinate_field(
-            "Lon Seconds", "lon_sec",
+            "sec", "lon_sec",
+            width=UIBuilder.width_for_chars(UIBuilder.DMS_SEC_CHARS),
             on_focus=on_focus, on_blur=on_blur, on_change=on_change
         )
         
