@@ -640,7 +640,7 @@ class CoordinateApp:
                 self.input_fields[spec.name] = field
                 self.input_tab_order.append(spec.name)
                 accuracy = self._accuracy_from_specs([spec])
-                if accuracy is not None:
+                if spec.name not in {"text"} and not spec.name.endswith("_dir"):
                     controls.append(
                         self._wrap_with_accuracy(field, accuracy, spec.name)
                     )
@@ -704,24 +704,34 @@ class CoordinateApp:
         accuracy_text = self._row_accuracy_labels.get(key)
         if accuracy_text is None:
             accuracy_text = ft.Text(
-                accuracy or "", size=12, color=ft.Colors.ON_SURFACE_VARIANT
+                accuracy or "",
+                size=12,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                visible=bool(accuracy),
             )
             self._row_accuracy_labels[key] = accuracy_text
             row.controls.append(accuracy_text)
         else:
             accuracy_text.value = accuracy or ""
+            accuracy_text.visible = bool(accuracy)
             if accuracy_text not in row.controls:
                 row.controls.append(accuracy_text)
 
     def _wrap_with_accuracy(
         self, control: ft.Control, accuracy: Optional[str], field_name: str
     ) -> ft.Control:
-        if not accuracy:
-            return control
-        accuracy_text = ft.Text(
-            accuracy, size=12, color=ft.Colors.ON_SURFACE_VARIANT
-        )
-        self._field_accuracy_labels[field_name] = accuracy_text
+        accuracy_text = self._field_accuracy_labels.get(field_name)
+        if accuracy_text is None:
+            accuracy_text = ft.Text(
+                accuracy or "",
+                size=12,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                visible=bool(accuracy),
+            )
+            self._field_accuracy_labels[field_name] = accuracy_text
+        else:
+            accuracy_text.value = accuracy or ""
+            accuracy_text.visible = bool(accuracy)
         return ft.Row(
             controls=[
                 control,
@@ -764,39 +774,33 @@ class CoordinateApp:
         ]
         if not numeric_specs:
             return None
+        valid_specs: List[Tuple[FieldSpec, int]] = []
+        for spec in numeric_specs:
+            decimals_value = self._decimals_from_field_value(spec.name)
+            if decimals_value is not None:
+                valid_specs.append((spec, decimals_value))
+        if not valid_specs:
+            return None
         preferred_order = ("_sec", "_min", "_deg")
-        selected: Optional[FieldSpec] = None
+        selected_spec: Optional[FieldSpec] = None
         selected_decimals: Optional[int] = None
-        fallback: Optional[FieldSpec] = None
         for suffix in preferred_order:
-            for spec in numeric_specs:
+            for spec, decimals_value in valid_specs:
                 if spec.name.endswith(suffix):
-                    decimals_override = self._decimals_from_field_value(spec.name)
-                    if decimals_override is not None:
-                        selected = spec
-                        selected_decimals = decimals_override
-                        break
-                    if fallback is None:
-                        fallback = spec
-            if selected is not None:
+                    selected_spec = spec
+                    selected_decimals = decimals_value
+                    break
+            if selected_spec is not None:
                 break
-        if selected is None:
-            if fallback is not None:
-                selected = fallback
-                selected_decimals = self._decimals_from_field_value(selected.name)
-            else:
-                selected = max(numeric_specs, key=lambda s: (s.decimals, s.name))
-                selected_decimals = self._decimals_from_field_value(selected.name)
-        if selected_decimals is None:
-            selected_decimals = self._decimals_from_field_value(selected.name)
-        decimals_value = (
-            selected_decimals if selected_decimals is not None else selected.decimals
-        )
+        if selected_spec is None:
+            selected_spec, selected_decimals = max(
+                valid_specs, key=lambda item: (item[1], item[0].name)
+            )
         return ui_builder.UIBuilder.accuracy_label(
-            decimals=decimals_value,
-            is_angle=selected.is_angle,
-            format_mode=selected.format_mode,
-            field_name=selected.name,
+            decimals=selected_decimals,
+            is_angle=selected_spec.is_angle,
+            format_mode=selected_spec.format_mode,
+            field_name=selected_spec.name,
         )
 
     def _row_key_for_field(self, field_name: str) -> Optional[str]:
@@ -810,10 +814,13 @@ class CoordinateApp:
         spec = self._field_specs.get(field_name)
         if accuracy_text is None or spec is None:
             return False
-        new_value = self._accuracy_from_specs([spec]) or ""
-        if accuracy_text.value == new_value:
+        new_accuracy = self._accuracy_from_specs([spec])
+        new_value = new_accuracy or ""
+        new_visible = bool(new_accuracy)
+        if accuracy_text.value == new_value and accuracy_text.visible == new_visible:
             return False
         accuracy_text.value = new_value
+        accuracy_text.visible = new_visible
         return True
 
     def _update_row_accuracy(self, row_key: str) -> bool:
@@ -821,10 +828,13 @@ class CoordinateApp:
         specs = self._row_specs.get(row_key)
         if accuracy_text is None or not specs:
             return False
-        new_value = self._accuracy_from_specs(specs) or ""
-        if accuracy_text.value == new_value:
+        new_accuracy = self._accuracy_from_specs(specs)
+        new_value = new_accuracy or ""
+        new_visible = bool(new_accuracy)
+        if accuracy_text.value == new_value and accuracy_text.visible == new_visible:
             return False
         accuracy_text.value = new_value
+        accuracy_text.visible = new_visible
         return True
 
     def _refresh_accuracy_for_change(self, field_name: Optional[str]) -> bool:
