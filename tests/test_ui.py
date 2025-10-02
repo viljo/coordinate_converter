@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import flet as ft
+from app import ui_builder
 from src.app.components import (
     Card,
     CoordinateFieldSpec,
@@ -77,3 +78,57 @@ def test_page_wrapper_applies_background_and_padding():
     wrapped = layout.page_wrapper(content)
     assert wrapped.bgcolor == theme.BACKGROUND_COLOR
     assert wrapped.padding == theme.SPACING_LG
+
+
+def test_dd_input_output_field_widths_align():
+    input_registry: dict[str, ft.TextField] = {}
+    output_registry: dict[str, ft.TextField] = {}
+
+    ui_builder.UIBuilder.build_dd_input_fields(
+        input_registry,
+        lambda e: None,
+        lambda e: None,
+        lambda e: None,
+    )
+    ui_builder.UIBuilder.build_dd_output_fields(output_registry)
+
+    assert input_registry["lat_deg"].width == output_registry["lat_deg"].width
+    assert input_registry["lon_deg"].width == output_registry["lon_deg"].width
+
+
+def test_ddm_input_output_field_widths_align():
+    input_registry: dict[str, ft.TextField] = {}
+    output_registry: dict[str, ft.TextField] = {}
+
+    ui_builder.UIBuilder.build_ddm_input_fields(
+        input_registry,
+        lambda e: None,
+        lambda e: None,
+        lambda e: None,
+    )
+    ui_builder.UIBuilder.build_ddm_output_fields(output_registry)
+
+    assert input_registry["lat_deg"].width == output_registry["lat_deg"].width
+    assert input_registry["lat_min"].width == output_registry["lat_min"].width
+    assert input_registry["lon_deg"].width == output_registry["lon_deg"].width
+    assert input_registry["lon_min"].width == output_registry["lon_min"].width
+
+
+def test_dms_input_output_field_widths_align():
+    input_registry: dict[str, ft.TextField] = {}
+    output_registry: dict[str, ft.TextField] = {}
+
+    ui_builder.UIBuilder.build_dms_input_fields(
+        input_registry,
+        lambda e: None,
+        lambda e: None,
+        lambda e: None,
+    )
+    ui_builder.UIBuilder.build_dms_output_fields(output_registry)
+
+    assert input_registry["lat_deg"].width == output_registry["lat_deg"].width
+    assert input_registry["lat_min"].width == output_registry["lat_min"].width
+    assert input_registry["lat_sec"].width == output_registry["lat_sec"].width
+    assert input_registry["lon_deg"].width == output_registry["lon_deg"].width
+    assert input_registry["lon_min"].width == output_registry["lon_min"].width
+    assert input_registry["lon_sec"].width == output_registry["lon_sec"].width

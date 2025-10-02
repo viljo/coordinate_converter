@@ -281,7 +281,7 @@ class CoordinateApp:
             label=HEIGHT_LABEL,
             read_only=True,
             helper_text="",
-            width=ui_builder.UIBuilder.HEIGHT_FIELD_WIDTH,
+            width=ui_builder.UIBuilder.coordinate_width("height"),
             text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
         )
         self.output_height_row = ft.Row(
@@ -516,6 +516,7 @@ class CoordinateApp:
                     label=spec.label,
                     autofocus=index == 0,
                     multiline=spec.name in {"mgrs", "text"},
+                    width=ui_builder.UIBuilder.coordinate_width(spec.name, spec.format_mode),
                 )
                 if spec.name != "mgrs":
                     field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
@@ -664,7 +665,7 @@ class CoordinateApp:
                 field = ft.TextField(
                     label=spec.label,
                     read_only=True,
-                    width=ui_builder.UIBuilder.COORD_FIELD_WIDTH,
+                    width=ui_builder.UIBuilder.coordinate_width(spec.name, spec.format_mode),
                     text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
                 )
                 self.output_fields[spec.name] = field
