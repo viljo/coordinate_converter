@@ -347,6 +347,7 @@ class CoordinateApp:
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
         # Accuracy indicators keyed per coordinate row/field
         self.input_accuracy_indicators: Dict[str, ft.Text] = {}
+        self.current_accuracy_radius_m: Optional[float] = None
 
         self.input_fields: Dict[str, ft.TextField] = {}
         self.input_fields_container = ft.Column(spacing=8)
@@ -824,38 +825,64 @@ class CoordinateApp:
         for indicator in self.input_accuracy_indicators.values():
             indicator.value = ""
             indicator.visible = False
+        self.current_accuracy_radius_m = None
+        self._apply_accuracy_overlay()
 
     def _update_input_accuracy(self) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
         self._clear_accuracy_indicator()
+        self.current_accuracy_radius_m = None
+        accuracy_values: List[float] = []
 
         if option.source_format in {"DD", "DDM", "DMS"}:
             lat_accuracy, lon_accuracy = self._calculate_angular_accuracy(
                 option.source_format
             )
             if lat_accuracy is None or lon_accuracy is None:
+                self._apply_accuracy_overlay()
                 return
+            accuracy_values.extend([lat_accuracy, lon_accuracy])
             self._set_accuracy_indicator("lat", lat_accuracy)
             self._set_accuracy_indicator("lon", lon_accuracy)
+            self.current_accuracy_radius_m = max(accuracy_values)
+            self._apply_accuracy_overlay()
             return
 
         if option.source_format == "RT90":
-            self._set_accuracy_indicator(
-                "easting", self._metric_accuracy_for_field("easting")
-            )
-            self._set_accuracy_indicator(
-                "northing", self._metric_accuracy_for_field("northing")
-            )
+            easting = self._metric_accuracy_for_field("easting")
+            northing = self._metric_accuracy_for_field("northing")
+            for value in (easting, northing):
+                if value is not None:
+                    accuracy_values.append(value)
+            self._set_accuracy_indicator("easting", easting)
+            self._set_accuracy_indicator("northing", northing)
+            if accuracy_values:
+                self.current_accuracy_radius_m = max(accuracy_values)
+            self._apply_accuracy_overlay()
             return
 
         if option.source_format in {"XYZ", "RR92_XYZ"}:
             for axis in ("x", "y", "z"):
-                self._set_accuracy_indicator(axis, self._metric_accuracy_for_field(axis))
+                axis_accuracy = self._metric_accuracy_for_field(axis)
+                if axis_accuracy is not None:
+                    accuracy_values.append(axis_accuracy)
+                self._set_accuracy_indicator(axis, axis_accuracy)
+            if accuracy_values:
+                self.current_accuracy_radius_m = max(accuracy_values)
+            self._apply_accuracy_overlay()
             return
 
         if option.source_format == "MGRS":
-            self._set_accuracy_indicator("mgrs", self._mgrs_accuracy())
+            mgrs_accuracy = self._mgrs_accuracy()
+            if mgrs_accuracy is not None:
+                accuracy_values.append(mgrs_accuracy)
+            self._set_accuracy_indicator("mgrs", mgrs_accuracy)
+            if accuracy_values:
+                self.current_accuracy_radius_m = max(accuracy_values)
+            self._apply_accuracy_overlay()
             return
+
+        self._apply_accuracy_overlay()
 
     def _calculate_angular_accuracy(
         self, format_mode: str
@@ -1052,10 +1079,23 @@ class CoordinateApp:
         indicator = self.input_accuracy_indicators.get(key)
         if indicator is None or meters is None:
             return
-        indicator.value = (
-            f"Target ±{self.ACCURACY_TARGET_METERS:.3f} m • Current ≈ {self._format_accuracy_value(meters)}"
-        )
+        indicator.value = f"Accuracy ≈ {self._format_accuracy_value(meters)}"
         indicator.visible = True
+
+    def _apply_accuracy_overlay(self) -> None:
+        if not self.map_ready or not hasattr(self.map_view, "run_javascript"):
+            return
+        if self.current_accuracy_radius_m is None:
+            self.map_view.run_javascript("clearAccuracyOverlay();")
+            return
+        latlon = self.current_results.get("WGS84_GEO")
+        if not isinstance(latlon, (list, tuple)) or len(latlon) < 2:
+            self.map_view.run_javascript("clearAccuracyOverlay();")
+            return
+        lat, lon = float(latlon[0]), float(latlon[1])
+        self.map_view.run_javascript(
+            f"updateAccuracyOverlay({lat}, {lon}, {self.current_accuracy_radius_m});"
+        )
 
     @staticmethod
     def _meters_per_degree_lat(lat_deg: float) -> float:
@@ -1136,12 +1176,14 @@ class CoordinateApp:
         if self.current_results.get("WGS84_GEO"):
             lat, lon, *_ = self.current_results["WGS84_GEO"]
             self._update_map(lat, lon)
+            self._apply_accuracy_overlay()
 
     def _update_map(self, lat: float, lon: float) -> None:
         if not self.map_ready:
             return
         if hasattr(self.map_view, "run_javascript"):
             self.map_view.run_javascript(f"updateMapCenter({lat}, {lon});")
+            self._apply_accuracy_overlay()
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
