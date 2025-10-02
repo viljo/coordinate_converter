@@ -38,7 +38,6 @@
         
         var currentLayer = null;
         var currentType = 'osm';
-        var accuracyCircle = null;
         
         // Function to change map type
         function changeMapType(type) {
@@ -65,35 +64,8 @@
             map.setView([lat, lon], map.getZoom());
         }
         
-        function updateAccuracyOverlay(lat, lon, radius) {
-            if (typeof lat !== 'number' || typeof lon !== 'number' || typeof radius !== 'number') {
-                return;
-            }
-            if (accuracyCircle) {
-                accuracyCircle.setLatLng([lat, lon]);
-                accuracyCircle.setRadius(radius);
-            } else {
-                accuracyCircle = L.circle([lat, lon], {
-                    radius: radius,
-                    color: '#ff0000',
-                    weight: 2,
-                    fill: false
-                }).addTo(map);
-            }
-        }
-
-        function clearAccuracyOverlay() {
-            if (accuracyCircle) {
-                map.removeLayer(accuracyCircle);
-                accuracyCircle = null;
-            }
-        }
-
         // Initialize with Terrain by default
         changeMapType('terrain');
-
-        window.updateAccuracyOverlay = updateAccuracyOverlay;
-        window.clearAccuracyOverlay = clearAccuracyOverlay;
 
         // Emit double-clicks to host via console
         map.on('dblclick', function(evt) {

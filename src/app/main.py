@@ -1076,19 +1076,8 @@ class CoordinateApp:
             pass
 
     def _apply_accuracy_overlay(self) -> None:
-        if not getattr(self, "map_ready", False):
-            return
-        if self.current_accuracy_radius_m is None:
-            self._run_map_script("clearAccuracyOverlay();")
-            return
-        latlon = self.current_results.get("WGS84_GEO")
-        if not isinstance(latlon, (list, tuple)) or len(latlon) < 2:
-            self._run_map_script("clearAccuracyOverlay();")
-            return
-        lat, lon = float(latlon[0]), float(latlon[1])
-        self._run_map_script(
-            f"updateAccuracyOverlay({lat}, {lon}, {self.current_accuracy_radius_m});"
-        )
+        """Accuracy overlay disabled for map rendering."""
+        return
 
     @staticmethod
     def _meters_per_degree_lat(lat_deg: float) -> float:
