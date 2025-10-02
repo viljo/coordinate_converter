@@ -66,9 +66,13 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="WGS84_GEO_DD",
         label="WGS84 geographic (DD)",
         fields=[
-            FieldSpec("lat_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec(
+                "lat_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"
+            ),
             FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DD"),
-            FieldSpec("lon_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec(
+                "lon_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"
+            ),
             FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DD"),
         ],
         source_format="DD",
@@ -81,11 +85,19 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="WGS84_GEO_DDM",
         label="WGS84 geographic (DDM)",
         fields=[
-            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
-            FieldSpec("lat_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec(
+                "lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"
+            ),
+            FieldSpec(
+                "lat_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"
+            ),
             FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DDM"),
-            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
-            FieldSpec("lon_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec(
+                "lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"
+            ),
+            FieldSpec(
+                "lon_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"
+            ),
             FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DDM"),
         ],
         source_format="DDM",
@@ -98,13 +110,25 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="WGS84_GEO_DMS",
         label="WGS84 geographic (DMS)",
         fields=[
-            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lat_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lat_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec(
+                "lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lat_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lat_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"
+            ),
             FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec(
+                "lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lon_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lon_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"
+            ),
             FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DMS"),
         ],
         source_format="DMS",
@@ -117,9 +141,13 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="SWEREF99_GEO_DD",
         label="SWEREF99 geographic (DD)",
         fields=[
-            FieldSpec("lat_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec(
+                "lat_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"
+            ),
             FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DD"),
-            FieldSpec("lon_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"),
+            FieldSpec(
+                "lon_deg", "Degrees", decimals=6, is_angle=True, format_mode="DD"
+            ),
             FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DD"),
         ],
         source_format="DD",
@@ -132,11 +160,19 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="SWEREF99_GEO_DDM",
         label="SWEREF99 geographic (DDM)",
         fields=[
-            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
-            FieldSpec("lat_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec(
+                "lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"
+            ),
+            FieldSpec(
+                "lat_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"
+            ),
             FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DDM"),
-            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"),
-            FieldSpec("lon_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"),
+            FieldSpec(
+                "lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DDM"
+            ),
+            FieldSpec(
+                "lon_min", "Minutes", decimals=4, is_angle=True, format_mode="DDM"
+            ),
             FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DDM"),
         ],
         source_format="DDM",
@@ -149,13 +185,25 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
         key="SWEREF99_GEO_DMS",
         label="SWEREF99 geographic (DMS)",
         fields=[
-            FieldSpec("lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lat_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lat_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec(
+                "lat_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lat_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lat_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"
+            ),
             FieldSpec("lat_dir", "N/S", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"),
-            FieldSpec("lon_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"),
+            FieldSpec(
+                "lon_deg", "Degrees", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lon_min", "Minutes", decimals=0, is_angle=True, format_mode="DMS"
+            ),
+            FieldSpec(
+                "lon_sec", "Seconds", decimals=1, is_angle=True, format_mode="DMS"
+            ),
             FieldSpec("lon_dir", "E/W", decimals=0, is_angle=True, format_mode="DMS"),
         ],
         source_format="DMS",
@@ -217,7 +265,9 @@ COORDINATE_OPTIONS_LIST: List[CoordinateOption] = [
     ),
 ]
 
-COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {option.key: option for option in COORDINATE_OPTIONS_LIST}
+COORDINATE_OPTIONS: Dict[str, CoordinateOption] = {
+    option.key: option for option in COORDINATE_OPTIONS_LIST
+}
 
 HEIGHT_LABEL = "Height (m)"
 
@@ -231,7 +281,9 @@ class CoordinateApp:
         self.page.window_width = 1280
         self.page.window_height = 900
         self.page.on_keyboard_event = self._on_page_key
-        self.input_tab_order: List[str] = []  # Ordered list of input field names for tab navigation
+        self.input_tab_order: List[str] = (
+            []
+        )  # Ordered list of input field names for tab navigation
         self.input_coord_selector = ft.Dropdown(
             label="Input coordinate source",
             options=[
@@ -293,7 +345,9 @@ class CoordinateApp:
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
         # Accuracy indicators (input rows only)
-        self.input_accuracy_text = ft.Text(value="", size=11, color=ft.Colors.ON_SURFACE_VARIANT)
+        self.input_accuracy_text = ft.Text(
+            value="", size=11, color=ft.Colors.ON_SURFACE_VARIANT
+        )
 
         self.input_fields: Dict[str, ft.TextField] = {}
         self.input_fields_container = ft.Column(spacing=8)
@@ -316,7 +370,9 @@ class CoordinateApp:
         self._rebuild_output_fields()
 
         # Map setup using data URL inline HTML
-        map_html_content = (Path(__file__).resolve().parent / "map_view" / "leaflet.html").read_text()
+        map_html_content = (
+            Path(__file__).resolve().parent / "map_view" / "leaflet.html"
+        ).read_text()
         tile_url = os.getenv("OSM_TILE_URL")
         if tile_url:
             map_html_content = map_html_content.replace(
@@ -325,7 +381,10 @@ class CoordinateApp:
             )
         # Use base64 encoding for better compatibility
         import base64
-        map_html_b64 = base64.b64encode(map_html_content.encode('utf-8')).decode('ascii')
+
+        map_html_b64 = base64.b64encode(map_html_content.encode("utf-8")).decode(
+            "ascii"
+        )
         map_url = f"data:text/html;base64,{map_html_b64}"
         self.map_ready = False
 
@@ -337,6 +396,7 @@ class CoordinateApp:
                 # Prefer JSON payload
                 if msg.startswith("{") and msg.endswith("}"):
                     import json
+
                     data = json.loads(msg)
                     if data.get("type") == "map_click":
                         lat = float(data["lat"])
@@ -359,16 +419,18 @@ class CoordinateApp:
             "on_page_ended": self._handle_map_page_event,
             "on_console_message": on_console_message,
         }
-        
+
         # Try to enable JavaScript with the correct property name
         javascript_mode = getattr(ft, "JavascriptMode", None)
         if javascript_mode is not None:
             webview_kwargs["javascript_mode"] = javascript_mode.UNRESTRICTED
-        
+
         self.map_view = ft.WebView(**webview_kwargs)
-        
+
         print(f"[INIT] WebView created, type: {type(self.map_view)}")
-        print(f"[INIT] WebView methods: {[m for m in dir(self.map_view) if not m.startswith('_')][:20]}")
+        print(
+            f"[INIT] WebView methods: {[m for m in dir(self.map_view) if not m.startswith('_')][:20]}"
+        )
 
         self.map_selector = ft.Dropdown(
             label="Map Type",
@@ -380,20 +442,27 @@ class CoordinateApp:
             value="terrain",
             on_change=self._on_map_type_change,
         )
-        print(f"[INIT] Map selector created with on_change handler: {self._on_map_type_change}")
+        print(
+            f"[INIT] Map selector created with on_change handler: {self._on_map_type_change}"
+        )
 
         controls_column = ft.Column(
             [
-                ft.Row([
-                    ft.Text("Input", style=ft.TextThemeStyle.TITLE_SMALL),
-                ]),
-                ft.Row([
-                    ft.ElevatedButton(
-                        text="Paste from clipboard",
-                        icon=ft.Icons.CONTENT_PASTE,
-                        on_click=self._on_paste_clipboard,
-                    ),
-                ], alignment=ft.MainAxisAlignment.START),
+                ft.Row(
+                    [
+                        ft.Text("Input", style=ft.TextThemeStyle.TITLE_SMALL),
+                    ]
+                ),
+                ft.Row(
+                    [
+                        ft.ElevatedButton(
+                            text="Paste from clipboard",
+                            icon=ft.Icons.CONTENT_PASTE,
+                            on_click=self._on_paste_clipboard,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.START,
+                ),
                 self.input_coord_selector,
                 self.input_height_row,
                 self.input_fields_container,
@@ -449,7 +518,7 @@ class CoordinateApp:
         self.input_fields.clear()
         controls: List[ft.Control] = []
         self._suspend_input_events = True
-        
+
         # Use UIBuilder for DD/DDM/DMS formats
         # UIBuilder callbacks receive event object only, not FieldSpec
         # We need to create FieldSpec from the field name for focus tracking
@@ -457,8 +526,9 @@ class CoordinateApp:
             def handler(e):
                 spec = FieldSpec(field_name, label, decimals=6, is_angle=True)
                 self._on_input_focus(spec)
+
             return handler
-        
+
         if option.source_format == "DD":
             # Create the fields first, then set up callbacks
             controls = ui_builder.UIBuilder.build_dd_input_fields(
@@ -474,7 +544,7 @@ class CoordinateApp:
             self.input_fields["lat_dir"].on_focus = make_on_focus("lat_dir", "N/S")
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
-            
+
         elif option.source_format == "DDM":
             controls = ui_builder.UIBuilder.build_ddm_input_fields(
                 self.input_fields,
@@ -483,14 +553,21 @@ class CoordinateApp:
                 lambda e: self._on_input_change(None),
             )
             # Set tab order: lat_dir → lat_deg → lat_min → lon_dir → lon_deg → lon_min (direction first)
-            self.input_tab_order = ["lat_dir", "lat_deg", "lat_min", "lon_dir", "lon_deg", "lon_min"]
+            self.input_tab_order = [
+                "lat_dir",
+                "lat_deg",
+                "lat_min",
+                "lon_dir",
+                "lon_deg",
+                "lon_min",
+            ]
             self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
             self.input_fields["lat_min"].on_focus = make_on_focus("lat_min", "Minutes")
             self.input_fields["lat_dir"].on_focus = make_on_focus("lat_dir", "N/S")
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
-            
+
         elif option.source_format == "DMS":
             controls = ui_builder.UIBuilder.build_dms_input_fields(
                 self.input_fields,
@@ -499,7 +576,16 @@ class CoordinateApp:
                 lambda e: self._on_input_change(None),
             )
             # Set tab order: lat_dir → lat_deg → lat_min → lat_sec → lon_dir → lon_deg → lon_min → lon_sec (direction first)
-            self.input_tab_order = ["lat_dir", "lat_deg", "lat_min", "lat_sec", "lon_dir", "lon_deg", "lon_min", "lon_sec"]
+            self.input_tab_order = [
+                "lat_dir",
+                "lat_deg",
+                "lat_min",
+                "lat_sec",
+                "lon_dir",
+                "lon_deg",
+                "lon_min",
+                "lon_sec",
+            ]
             self.input_fields["lat_deg"].on_focus = make_on_focus("lat_deg", "Degrees")
             self.input_fields["lat_min"].on_focus = make_on_focus("lat_min", "Minutes")
             self.input_fields["lat_sec"].on_focus = make_on_focus("lat_sec", "Seconds")
@@ -517,9 +603,13 @@ class CoordinateApp:
                         label=spec.label,
                         autofocus=index == 0,
                         multiline=True,
-                        width=ui_builder.UIBuilder.coordinate_width(spec.name, spec.format_mode),
+                        width=ui_builder.UIBuilder.coordinate_width(
+                            spec.name, spec.format_mode
+                        ),
                     )
-                    field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
+                    field.on_change = lambda _e, name=spec.name: self._on_input_change(
+                        name
+                    )
                 else:
                     field = ui_builder.UIBuilder.create_coordinate_field(
                         name=spec.name,
@@ -529,11 +619,13 @@ class CoordinateApp:
                     if spec.name != "mgrs":
                         field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
                         field.on_blur = self._on_input_blur
-                    field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
+                    field.on_change = lambda _e, name=spec.name: self._on_input_change(
+                        name
+                    )
                 self.input_fields[spec.name] = field
                 self.input_tab_order.append(spec.name)
                 controls.append(field)
-        
+
         self.input_height_row.controls = [self.input_height_selector]
         if option.separate_height:
             height_spec = FieldSpec("height", HEIGHT_LABEL, decimals=3)
@@ -571,15 +663,16 @@ class CoordinateApp:
             mgrs_value = self.current_results.get("MGRS")
             if mgrs_value is None:
                 return
-        # Expect a sequence (lat, lon, ...)
-        if not isinstance(values_any, (list, tuple)) or len(values_any) < 2:
+        if not isinstance(values_any, (list, tuple)):
             return
-        lat_value = float(values_any[0])
-        lon_value = float(values_any[1])
+
+        values_seq = tuple(float(v) for v in values_any)
 
         self._suspend_input_events = True
         try:
-            if option.source_format == "DD":
+            if option.source_format == "DD" and len(values_seq) >= 2:
+                lat_value = values_seq[0]
+                lon_value = values_seq[1]
                 lat_deg_field = self.input_fields.get("lat_deg")
                 lon_deg_field = self.input_fields.get("lon_deg")
                 lat_dir_field = self.input_fields.get("lat_dir")
@@ -593,7 +686,9 @@ class CoordinateApp:
                 if lon_dir_field:
                     lon_dir_field.value = "E" if lon_value >= 0 else "W"
 
-            elif option.source_format == "DDM":
+            elif option.source_format == "DDM" and len(values_seq) >= 2:
+                lat_value = values_seq[0]
+                lon_value = values_seq[1]
                 # Latitude
                 lat_deg = int(abs(lat_value))
                 lat_min = (abs(lat_value) - lat_deg) * 60.0
@@ -619,33 +714,47 @@ class CoordinateApp:
                 if lon_dir_field:
                     lon_dir_field.value = "E" if lon_value >= 0 else "W"
 
-            elif option.source_format == "DMS":
+            elif option.source_format == "DMS" and len(values_seq) >= 2:
+                lat_value = values_seq[0]
+                lon_value = values_seq[1]
                 # Latitude
                 lat_deg = int(abs(lat_value))
                 lat_min_dec = (abs(lat_value) - lat_deg) * 60.0
                 lat_min = int(lat_min_dec)
                 lat_sec = (lat_min_dec - lat_min) * 60.0
-                if (f := self.input_fields.get("lat_deg")):
+                if f := self.input_fields.get("lat_deg"):
                     f.value = f"{lat_deg}"
-                if (f := self.input_fields.get("lat_min")):
+                if f := self.input_fields.get("lat_min"):
                     f.value = f"{lat_min}"
-                if (f := self.input_fields.get("lat_sec")):
+                if f := self.input_fields.get("lat_sec"):
                     f.value = f"{lat_sec:.1f}"
-                if (f := self.input_fields.get("lat_dir")):
+                if f := self.input_fields.get("lat_dir"):
                     f.value = "N" if lat_value >= 0 else "S"
                 # Longitude
                 lon_deg = int(abs(lon_value))
                 lon_min_dec = (abs(lon_value) - lon_deg) * 60.0
                 lon_min = int(lon_min_dec)
                 lon_sec = (lon_min_dec - lon_min) * 60.0
-                if (f := self.input_fields.get("lon_deg")):
+                if f := self.input_fields.get("lon_deg"):
                     f.value = f"{lon_deg}"
-                if (f := self.input_fields.get("lon_min")):
+                if f := self.input_fields.get("lon_min"):
                     f.value = f"{lon_min}"
-                if (f := self.input_fields.get("lon_sec")):
+                if f := self.input_fields.get("lon_sec"):
                     f.value = f"{lon_sec:.1f}"
-                if (f := self.input_fields.get("lon_dir")):
+                if f := self.input_fields.get("lon_dir"):
                     f.value = "E" if lon_value >= 0 else "W"
+
+            else:
+                for index, spec in enumerate(option.fields):
+                    field = self.input_fields.get(spec.name)
+                    if not field:
+                        continue
+                    if index < len(values_seq):
+                        value = values_seq[index]
+                        decimals = spec.decimals if not spec.is_angle else 6
+                        field.value = f"{value:.{decimals}f}"
+                    else:
+                        field.value = ""
 
             # Populate height if present
             if option.separate_height and self.input_height_field is not None:
@@ -659,7 +768,7 @@ class CoordinateApp:
         option = COORDINATE_OPTIONS[self.output_coord_selector.value]
         self.output_fields.clear()
         controls: List[ft.Control] = []
-        
+
         # Use UIBuilder for DD/DDM/DMS formats
         if option.source_format == "DD":
             controls = ui_builder.UIBuilder.build_dd_output_fields(self.output_fields)
@@ -677,14 +786,16 @@ class CoordinateApp:
                 )
                 self.output_fields[spec.name] = field
                 controls.append(field)
-        
+
         self.output_fields_container.controls = controls
         self.output_height_row.visible = option.separate_height
         self._update_output_height_display()
         self.page.update()
 
     def _map_url(self) -> str:
-        inline_html = (Path(__file__).resolve().parent / "map_view" / "leaflet.html").read_text()
+        inline_html = (
+            Path(__file__).resolve().parent / "map_view" / "leaflet.html"
+        ).read_text()
         tile_url = os.getenv("OSM_TILE_URL")
         if tile_url:
             inline_html = inline_html.replace(
@@ -711,9 +822,13 @@ class CoordinateApp:
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
-            return f"{self._deg_to_ddm(lat, 'N', 'S')} / {self._deg_to_ddm(lon, 'E', 'W')}"
+            return (
+                f"{self._deg_to_ddm(lat, 'N', 'S')} / {self._deg_to_ddm(lon, 'E', 'W')}"
+            )
         if fmt == "DMS":
-            return f"{self._deg_to_dms(lat, 'N', 'S')} / {self._deg_to_dms(lon, 'E', 'W')}"
+            return (
+                f"{self._deg_to_dms(lat, 'N', 'S')} / {self._deg_to_dms(lon, 'E', 'W')}"
+            )
         return f"{lat:.6f}, {lon:.6f}"
 
     def _height_summary(self) -> str:
@@ -807,7 +922,9 @@ class CoordinateApp:
             return
         # Pre-parse without changing inputs
         try:
-            preview = core_parser.parse(clipboard_text, default_crs=CRSCode.SWEREF99_GEO)
+            preview = core_parser.parse(
+                clipboard_text, default_crs=CRSCode.SWEREF99_GEO
+            )
         except Exception:
             preview = None
         if preview is None:
@@ -882,15 +999,23 @@ class CoordinateApp:
                 # Get direction values
                 lat_dir_field = self.input_fields.get("lat_dir")
                 lon_dir_field = self.input_fields.get("lon_dir")
-                lat_dir = lat_dir_field.value.strip().upper() if lat_dir_field and lat_dir_field.value else "N"
-                lon_dir = lon_dir_field.value.strip().upper() if lon_dir_field and lon_dir_field.value else "E"
-                
+                lat_dir = (
+                    lat_dir_field.value.strip().upper()
+                    if lat_dir_field and lat_dir_field.value
+                    else "N"
+                )
+                lon_dir = (
+                    lon_dir_field.value.strip().upper()
+                    if lon_dir_field and lon_dir_field.value
+                    else "E"
+                )
+
                 if option.source_format == "DD":
                     lat_deg = self.input_fields["lat_deg"].value.strip()
                     lon_deg = self.input_fields["lon_deg"].value.strip()
                     if not lat_deg or not lon_deg:
                         raise ParseError("Latitude and longitude degrees are required")
-                    
+
                     # Apply direction signs
                     lat_val = float(lat_deg) if lat_dir == "N" else -float(lat_deg)
                     lon_val = float(lon_deg) if lon_dir == "E" else -float(lon_deg)
@@ -901,8 +1026,10 @@ class CoordinateApp:
                     lon_deg = self.input_fields["lon_deg"].value.strip()
                     lon_min = self.input_fields["lon_min"].value.strip()
                     if not all([lat_deg, lat_min, lon_deg, lon_min]):
-                        raise ParseError("All latitude and longitude components are required")
-                    
+                        raise ParseError(
+                            "All latitude and longitude components are required"
+                        )
+
                     # Convert to decimal degrees and apply direction signs
                     lat_val = float(lat_deg) + float(lat_min) / 60.0
                     lon_val = float(lon_deg) + float(lon_min) / 60.0
@@ -917,15 +1044,21 @@ class CoordinateApp:
                     lon_min = self.input_fields["lon_min"].value.strip()
                     lon_sec = self.input_fields["lon_sec"].value.strip()
                     if not all([lat_deg, lat_min, lat_sec, lon_deg, lon_min, lon_sec]):
-                        raise ParseError("All latitude and longitude components are required")
-                    
+                        raise ParseError(
+                            "All latitude and longitude components are required"
+                        )
+
                     # Convert to decimal degrees and apply direction signs
-                    lat_val = float(lat_deg) + float(lat_min) / 60.0 + float(lat_sec) / 3600.0
-                    lon_val = float(lon_deg) + float(lon_min) / 60.0 + float(lon_sec) / 3600.0
+                    lat_val = (
+                        float(lat_deg) + float(lat_min) / 60.0 + float(lat_sec) / 3600.0
+                    )
+                    lon_val = (
+                        float(lon_deg) + float(lon_min) / 60.0 + float(lon_sec) / 3600.0
+                    )
                     lat_val = lat_val if lat_dir == "N" else -lat_val
                     lon_val = lon_val if lon_dir == "E" else -lon_val
                     composed = f"{lat_val} {lon_val}"
-                
+
                 height_text = None
                 if option.separate_height and self.input_height_field is not None:
                     height_text = self.input_height_field.value.strip()
@@ -1004,9 +1137,7 @@ class CoordinateApp:
         self._update_output_height_display()
 
         lat, lon, *_ = results.get("WGS84_GEO", (0.0, 0.0, 0.0))
-        self.status_text.value = (
-            f"Parsed CRS: {parsed.crs.value} | Format: {parsed.source_format} | Height: {parsed.height_system}"
-        )
+        self.status_text.value = f"Parsed CRS: {parsed.crs.value} | Format: {parsed.source_format} | Height: {parsed.height_system}"
         warnings = list(parsed.warnings)
         if "WARNINGS" in results:
             warnings.extend(results["WARNINGS"])
@@ -1050,7 +1181,7 @@ class CoordinateApp:
                         return
                 except (ValueError, AttributeError):
                     pass
-        
+
         # Handle Shift+Tab for reverse tab order
         if event.key == "Tab" and event.shift:
             if self.focused_field and self.focused_field in self.input_tab_order:
@@ -1067,7 +1198,7 @@ class CoordinateApp:
                         return
                 except (ValueError, AttributeError):
                     pass
-        
+
         # Handle arrow keys for increment/decrement
         if self.focused_field is None or event.key not in ("ArrowUp", "ArrowDown"):
             return
@@ -1101,12 +1232,12 @@ class CoordinateApp:
             values_seq = tuple(float(v) for v in values)
         else:
             values_seq = ()
-        
+
         # Handle DD/DDM/DMS formats with separate fields
         if option.source_format in {"DD", "DDM", "DMS"} and len(values_seq) >= 2:
             lat_value = values_seq[0]
             lon_value = values_seq[1]
-            
+
             # Populate latitude fields
             if option.source_format == "DD":
                 lat_deg_field = self.output_fields.get("lat_deg")
@@ -1144,7 +1275,7 @@ class CoordinateApp:
                 lat_dir_field = self.output_fields.get("lat_dir")
                 if lat_dir_field:
                     lat_dir_field.value = "N" if lat_value >= 0 else "S"
-            
+
             # Populate longitude fields
             if option.source_format == "DD":
                 lon_deg_field = self.output_fields.get("lon_deg")
@@ -1194,7 +1325,7 @@ class CoordinateApp:
                     field.value = f"{value:.{decimals}f}"
                 else:
                     field.value = ""
-        
+
         if option.key == "MGRS":
             mgrs_value = self.current_results.get("MGRS")
             field = self.output_fields.get("mgrs")
@@ -1205,7 +1336,7 @@ class CoordinateApp:
     def _on_map_type_change(self, event) -> None:
         print(f"[MAP] _on_map_type_change called! Event: {event}")
         print(f"[MAP] Current selector value: {self.map_selector.value}")
-        
+
         map_type = self.map_selector.value
         if not map_type:
             map_type = "terrain"
@@ -1213,9 +1344,11 @@ class CoordinateApp:
             map_type = "terrain"
         self.map_selector.value = map_type
         self.map_selector.update()
-        
-        print(f"[MAP] Attempting to change map type to: {map_type}, map_ready={self.map_ready}")
-        
+
+        print(
+            f"[MAP] Attempting to change map type to: {map_type}, map_ready={self.map_ready}"
+        )
+
         # Use run_javascript method (not eval_js)
         if hasattr(self.map_view, "run_javascript"):
             try:
@@ -1224,13 +1357,24 @@ class CoordinateApp:
             except Exception as e:
                 print(f"[MAP] Error changing map type: {e}")
                 import traceback
+
                 traceback.print_exc()
         else:
-            print(f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}")
+            print(
+                f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}"
+            )
 
     def _set_input_coordinate_from_latlon(self, lat: float, lon: float) -> None:
         # Ensure input type supports lat/lon without changing type
-        if self.input_coord_selector.value not in {"WGS84_GEO_DD", "SWEREF99_GEO_DD", "WGS84_GEO_DDM", "WGS84_GEO_DMS", "SWEREF99_GEO_DDM", "SWEREF99_GEO_DMS", "FREE_TEXT"}:
+        if self.input_coord_selector.value not in {
+            "WGS84_GEO_DD",
+            "SWEREF99_GEO_DD",
+            "WGS84_GEO_DDM",
+            "WGS84_GEO_DMS",
+            "SWEREF99_GEO_DDM",
+            "SWEREF99_GEO_DMS",
+            "FREE_TEXT",
+        }:
             return
         # Set values and trigger conversion
         lat_field = self.input_fields.get("lat_deg")
@@ -1244,7 +1388,12 @@ class CoordinateApp:
                 text_field.value = f"{lat} {lon}"
                 self._on_convert(None)
             return
-        if lat_field is not None and lon_field is not None and lat_dir_field is not None and lon_dir_field is not None:
+        if (
+            lat_field is not None
+            and lon_field is not None
+            and lat_dir_field is not None
+            and lon_dir_field is not None
+        ):
             lat_dir_field.value = "N" if lat >= 0 else "S"
             lon_dir_field.value = "E" if lon >= 0 else "W"
             lat_field.value = f"{abs(lat):.6f}"
