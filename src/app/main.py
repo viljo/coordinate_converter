@@ -961,48 +961,35 @@ class CoordinateApp:
             style=ft.ButtonStyle(padding=ft.padding.all(6)),
         )
 
+    @staticmethod
+    def _compact_value(text: str | None) -> str:
+        return "".join((text or "").split())
+
     def _copy_single_field(self, field: ft.TextField) -> None:
-        label = (field.label or "").strip()
-        value = (field.value or "").strip()
-        if label and value:
-            text = f"{label}: {value}"
-        elif value:
-            text = value
-        else:
-            text = label
+        text = self._compact_value(field.value)
         self._copy_text(text)
 
     def _copy_output_row(self, label_text: str, row: ft.Row) -> None:
         values: List[str] = []
         for ctrl in row.controls:
             if isinstance(ctrl, ft.TextField):
-                value = (ctrl.value or "").strip()
+                value = self._compact_value(ctrl.value)
                 if value:
-                    values.append("".join(value.split()))
-            elif isinstance(ctrl, ft.Text):
-                value = (ctrl.value or "").strip()
-                if value:
-                    values.append("".join(value.split()))
+                    values.append(value)
         text = "".join(values)
         self._copy_text(text)
 
     def _copy_height_value(self, _event) -> None:
-        label = (self.output_height_field.label or "Height").strip()
-        value = (self.output_height_field.value or "").strip()
-        helper = (self.output_height_field.helper_text or "").strip()
-        if value:
-            text = f"{label}: {value}"
-        else:
-            text = label
-        if helper:
-            text = f"{text} ({helper})"
+        text = self._compact_value(self.output_height_field.value)
         self._copy_text(text)
 
     def _copy_formatted_text(self, _event) -> None:
         formatted_display = (self.formatted_text.value or "").split(" | ")[0]
-        coordinate_text = (
-            self._formatted_coordinate_value or formatted_display or ""
-        ).strip()
+        coordinate_text = self._formatted_coordinate_value.strip()
+        if not coordinate_text:
+            coordinate_text = self._collect_selected_output_values()
+        if not coordinate_text:
+            coordinate_text = formatted_display.strip()
         self._copy_text(coordinate_text)
 
     def _copy_text(self, text: str) -> None:
@@ -1038,6 +1025,23 @@ class CoordinateApp:
         except Exception:
             ascii_text = cleaned
         return " ".join(ascii_text.strip().split())
+
+    def _collect_selected_output_values(self) -> str:
+        option = COORDINATE_OPTIONS.get(self.output_coord_selector.value)
+        if not option:
+            return ""
+        values: List[str] = []
+        for spec in option.fields:
+            field = self.output_fields.get(spec.name)
+            if isinstance(field, ft.TextField):
+                value = self._compact_value(field.value)
+                if value:
+                    values.append(value)
+        if not values:
+            return ""
+        if len(values) == 1:
+            return values[0]
+        return ",".join(values)
 
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
