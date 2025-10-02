@@ -278,8 +278,8 @@ class CoordinateApp:
         self.page.title = "Coordinate Converter"
         self.page.padding = 16
         self.page.theme_mode = ft.ThemeMode.SYSTEM
-        self.page.window_width = 1280
-        self.page.window_height = 900
+        self.page.window_width = 1998
+        self.page.window_height = 1606
         self.page.on_keyboard_event = self._on_page_key
         self.input_tab_order: List[str] = (
             []
