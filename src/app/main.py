@@ -973,17 +973,17 @@ class CoordinateApp:
         self._copy_text(text)
 
     def _copy_output_row(self, label_text: str, row: ft.Row) -> None:
-        base_label = label_text.strip()
         values: List[str] = []
         for ctrl in row.controls:
             if isinstance(ctrl, ft.TextField):
                 value = (ctrl.value or "").strip()
                 if value:
-                    values.append(value)
-        if values:
-            text = f"{base_label} {' '.join(values)}"
-        else:
-            text = base_label
+                    values.append("".join(value.split()))
+            elif isinstance(ctrl, ft.Text):
+                value = (ctrl.value or "").strip()
+                if value:
+                    values.append("".join(value.split()))
+        text = "".join(values)
         self._copy_text(text)
 
     def _copy_height_value(self, _event) -> None:
@@ -999,7 +999,10 @@ class CoordinateApp:
         self._copy_text(text)
 
     def _copy_formatted_text(self, _event) -> None:
-        coordinate_text = (self._formatted_coordinate_value or "").strip()
+        formatted_display = (self.formatted_text.value or "").split(" | ")[0]
+        coordinate_text = (
+            self._formatted_coordinate_value or formatted_display or ""
+        ).strip()
         self._copy_text(coordinate_text)
 
     def _copy_text(self, text: str) -> None:
