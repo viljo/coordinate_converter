@@ -43,6 +43,12 @@ The Coordinate Converter application provides accurate transformations between S
 - Labels written in sentence case: `Latitude (°)`, not `LATITUDE`.
 - Units rendered in smaller font size (12px) but aligned with the value field.
 
+### Coordinate Field Consistency
+- Angular coordinate fields (Latitude/Longitude in any representation) use the **same width** as the input panel field to ensure perfect alignment between input and output.
+- Linear coordinates (northing/easting, geocentric X/Y/Z, heights) share a fixed width distinct from angular fields.
+- Grid-based outputs (MGRS, RT90 string formats) are constrained to a shared width matching their corresponding outputs.
+- **All coordinate inputs and outputs are instantiated from the same field configuration** so formatting, widths, labels, and tab order remain in sync across the UI.
+
 ### Error States
 - Invalid input triggers:
   - Red border around the field.
