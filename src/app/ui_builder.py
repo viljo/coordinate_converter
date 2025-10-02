@@ -40,6 +40,9 @@ class UIBuilder:
     CHAR_PIXEL_WIDTH = 9
     FIELD_PADDING_PX = 24
 
+    # Approximate length of one degree of latitude in metres (used for accuracy text)
+    METERS_PER_DEGREE = 111_320.0
+
     # Shared labels to ensure inputs and outputs stay synchronized
     FIELD_LABELS: Dict[tuple[str, Optional[str]], str] = {
         ("lat_deg", "DD"): "deg",
@@ -91,6 +94,62 @@ class UIBuilder:
 
     # Fallback constants (used where precise context not known)
     COORD_FIELD_WIDTH = 159
+
+    @staticmethod
+    def _format_number(value: float) -> str:
+        """Format a numeric value with at most one decimal, trimming zeros."""
+
+        if value >= 10:
+            return str(int(round(value)))
+        formatted = f"{value:.1f}"
+        if formatted.endswith(".0"):
+            formatted = formatted[:-2]
+        return formatted
+
+    @staticmethod
+    def _format_accuracy(meters: float) -> Optional[str]:
+        """Return a formatted ±accuracy string in cm or m."""
+
+        if meters <= 0:
+            return None
+        if meters < 1.0:
+            centimeters = meters * 100.0
+            value = UIBuilder._format_number(centimeters)
+            return f"±{value} cm"
+        value = UIBuilder._format_number(meters)
+        return f"±{value} m"
+
+    @staticmethod
+    def _angle_resolution_in_meters(decimals: int, format_mode: Optional[str]) -> float:
+        """Calculate the linear resolution represented by the angular field."""
+
+        step = 10 ** (-decimals)
+        if format_mode == "DDM":
+            step /= 60.0
+        elif format_mode == "DMS":
+            step /= 3600.0
+        return step * UIBuilder.METERS_PER_DEGREE
+
+    @staticmethod
+    def accuracy_label(
+        *,
+        decimals: int,
+        is_angle: bool,
+        format_mode: Optional[str],
+        field_name: str,
+    ) -> Optional[str]:
+        """Create an accuracy label for a field definition."""
+
+        if field_name in {"text", "lat_dir", "lon_dir"}:
+            return None
+        if is_angle:
+            meters = UIBuilder._angle_resolution_in_meters(decimals, format_mode)
+        else:
+            if field_name == "mgrs":
+                meters = 1.0
+            else:
+                meters = 10 ** (-decimals)
+        return UIBuilder._format_accuracy(meters)
     
     @staticmethod
     def coordinate_width(name: str, format_mode: Optional[str] = None) -> int:

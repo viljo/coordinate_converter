@@ -340,6 +340,10 @@ class CoordinateApp:
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
+        output_height_accuracy = self._accuracy_from_specs(
+            [FieldSpec("height", HEIGHT_LABEL, decimals=3)]
+        )
+        self._append_accuracy_to_row(self.output_height_row, output_height_accuracy)
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
@@ -623,7 +627,15 @@ class CoordinateApp:
                     )
                 self.input_fields[spec.name] = field
                 self.input_tab_order.append(spec.name)
-                controls.append(field)
+                accuracy = self._accuracy_from_specs([spec])
+                controls.append(self._wrap_with_accuracy(field, accuracy))
+
+        if option.source_format in {"DD", "DDM", "DMS"}:
+            accuracies = [
+                self._accuracy_from_specs(self._specs_with_prefix(option, "lat")),
+                self._accuracy_from_specs(self._specs_with_prefix(option, "lon")),
+            ]
+            self._apply_accuracy_to_rows(controls, accuracies)
 
         self.input_height_row.controls = [self.input_height_selector]
         if option.separate_height:
@@ -634,6 +646,8 @@ class CoordinateApp:
                 on_change=lambda e: self._on_input_change("height"),
             )
             self.input_height_row.controls.append(self.input_height_field)
+            height_accuracy = self._accuracy_from_specs([height_spec])
+            self._append_accuracy_to_row(self.input_height_row, height_accuracy)
             self.input_height_row.visible = True
             # Add height to tab order after the coordinate fields
             self.input_tab_order.append("height")
@@ -646,6 +660,72 @@ class CoordinateApp:
         self.focused_field_spec = None
         self._populate_input_from_results(option)
         self.page.update()
+
+    @staticmethod
+    def _specs_with_prefix(option: CoordinateOption, prefix: str) -> List[FieldSpec]:
+        return [spec for spec in option.fields if spec.name.startswith(prefix)]
+
+    def _apply_accuracy_to_rows(
+        self, controls: List[ft.Control], accuracies: List[Optional[str]]
+    ) -> None:
+        row_index = 0
+        for control in controls:
+            if isinstance(control, ft.Row) and row_index < len(accuracies):
+                self._append_accuracy_to_row(control, accuracies[row_index])
+                row_index += 1
+
+    def _append_accuracy_to_row(
+        self, row: ft.Row, accuracy: Optional[str]
+    ) -> None:
+        if not accuracy:
+            return
+        row.vertical_alignment = ft.CrossAxisAlignment.CENTER
+        row.controls.append(
+            ft.Text(accuracy, size=12, color=ft.Colors.ON_SURFACE_VARIANT)
+        )
+
+    def _wrap_with_accuracy(
+        self, control: ft.Control, accuracy: Optional[str]
+    ) -> ft.Control:
+        if not accuracy:
+            return control
+        return ft.Row(
+            controls=[
+                control,
+                ft.Text(accuracy, size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+            ],
+            spacing=8,
+            alignment=ft.MainAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+    def _accuracy_from_specs(self, specs: List[FieldSpec]) -> Optional[str]:
+        if not specs:
+            return None
+        numeric_specs = [
+            spec
+            for spec in specs
+            if spec.name not in {"text"} and not spec.name.endswith("_dir")
+        ]
+        if not numeric_specs:
+            return None
+        preferred_order = ("_sec", "_min", "_deg")
+        selected: Optional[FieldSpec] = None
+        for suffix in preferred_order:
+            for spec in numeric_specs:
+                if spec.name.endswith(suffix):
+                    selected = spec
+                    break
+            if selected is not None:
+                break
+        if selected is None:
+            selected = max(numeric_specs, key=lambda s: (s.decimals, s.name))
+        return ui_builder.UIBuilder.accuracy_label(
+            decimals=selected.decimals,
+            is_angle=selected.is_angle,
+            format_mode=selected.format_mode,
+            field_name=selected.name,
+        )
 
     def _populate_input_from_results(self, option: CoordinateOption) -> None:
         if not self.current_results:
@@ -784,7 +864,15 @@ class CoordinateApp:
                     read_only=True,
                 )
                 self.output_fields[spec.name] = field
-                controls.append(field)
+                accuracy = self._accuracy_from_specs([spec])
+                controls.append(self._wrap_with_accuracy(field, accuracy))
+
+        if option.source_format in {"DD", "DDM", "DMS"}:
+            accuracies = [
+                self._accuracy_from_specs(self._specs_with_prefix(option, "lat")),
+                self._accuracy_from_specs(self._specs_with_prefix(option, "lon")),
+            ]
+            self._apply_accuracy_to_rows(controls, accuracies)
 
         self.output_fields_container.controls = controls
         self.output_height_row.visible = option.separate_height
