@@ -351,8 +351,9 @@ class CoordinateApp:
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
+        self._formatted_coordinate_value: str = ""
         self.formatted_text_copy_button = self._make_copy_button(
-            "Copy formatted coordinate",
+            "Copy coordinate",
             self._copy_formatted_text,
         )
         self.formatted_text_row = ft.Row(
@@ -998,8 +999,8 @@ class CoordinateApp:
         self._copy_text(text)
 
     def _copy_formatted_text(self, _event) -> None:
-        text = (self.formatted_text.value or "").strip()
-        self._copy_text(text)
+        coordinate_text = (self._formatted_coordinate_value or "").strip()
+        self._copy_text(coordinate_text)
 
     def _copy_text(self, text: str) -> None:
         ascii_text = self._sanitize_ascii(text)
@@ -1148,6 +1149,7 @@ class CoordinateApp:
             self.status_text.value = f"Input error: {exc}"
             self.warning_text.value = ""
             self.formatted_text.value = ""
+            self._formatted_coordinate_value = ""
             self.page.update()
             return
         self._run_conversion(parsed)
@@ -1300,9 +1302,11 @@ class CoordinateApp:
             self.status_text.value = f"Transform error: {exc}"
             self.warning_text.value = ""
             self.formatted_text.value = ""
+            self._formatted_coordinate_value = ""
             self.page.update()
             return
         self.current_results = results
+        self._formatted_coordinate_value = ""
 
         self._update_output_fields()
         self._update_output_height_display()
@@ -1324,9 +1328,13 @@ class CoordinateApp:
             lat_val = float(display_values[0])
             lon_val = float(display_values[1])
             format_mode = selected_option.fields[0].format_mode or "DD"
-            formatted_parts.append(self._format_latlon(lat_val, lon_val, format_mode))
+            self._formatted_coordinate_value = self._format_latlon(
+                lat_val, lon_val, format_mode
+            )
+            formatted_parts.append(self._formatted_coordinate_value)
         elif selected_output == "MGRS" and "MGRS" in results:
-            formatted_parts.append(str(results["MGRS"]))
+            self._formatted_coordinate_value = str(results["MGRS"])
+            formatted_parts.append(self._formatted_coordinate_value)
         height_summary = self._height_summary()
         if height_summary:
             formatted_parts.append(height_summary)
