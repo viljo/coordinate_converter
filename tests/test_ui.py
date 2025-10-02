@@ -132,3 +132,39 @@ def test_dms_input_output_field_widths_align():
     assert input_registry["lon_deg"].width == output_registry["lon_deg"].width
     assert input_registry["lon_min"].width == output_registry["lon_min"].width
     assert input_registry["lon_sec"].width == output_registry["lon_sec"].width
+
+
+def test_coordinate_labels_match_between_input_and_output():
+    input_registry: dict[str, ft.TextField] = {}
+    output_registry: dict[str, ft.TextField] = {}
+
+    ui_builder.UIBuilder.build_ddm_input_fields(
+        input_registry,
+        lambda e: None,
+        lambda e: None,
+        lambda e: None,
+    )
+    ui_builder.UIBuilder.build_ddm_output_fields(output_registry)
+
+    assert input_registry["lat_deg"].label == output_registry["lat_deg"].label
+    assert input_registry["lat_min"].label == output_registry["lat_min"].label
+    assert input_registry["lon_deg"].label == output_registry["lon_deg"].label
+    assert input_registry["lon_min"].label == output_registry["lon_min"].label
+
+
+def test_dms_minutes_share_degree_width():
+    input_registry: dict[str, ft.TextField] = {}
+    output_registry: dict[str, ft.TextField] = {}
+
+    ui_builder.UIBuilder.build_dms_input_fields(
+        input_registry,
+        lambda e: None,
+        lambda e: None,
+        lambda e: None,
+    )
+    ui_builder.UIBuilder.build_dms_output_fields(output_registry)
+
+    assert input_registry["lat_min"].width == input_registry["lat_deg"].width
+    assert input_registry["lon_min"].width == input_registry["lon_deg"].width
+    assert output_registry["lat_min"].width == output_registry["lat_deg"].width
+    assert output_registry["lon_min"].width == output_registry["lon_deg"].width

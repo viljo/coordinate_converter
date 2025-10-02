@@ -47,6 +47,8 @@ The Coordinate Converter application provides accurate transformations between S
 - Angular coordinate fields (Latitude/Longitude in any representation) use the **same width** as the input panel field to ensure perfect alignment between input and output.
 - Linear coordinates (northing/easting, geocentric X/Y/Z, heights) share a fixed width distinct from angular fields.
 - Grid-based outputs (MGRS, RT90 string formats) are constrained to a shared width matching their corresponding outputs.
+- **Labels are sourced from a single definition** so matching input/output coordinate types display identical label text (e.g., `deg`, `min`, `sec`).
+- In the DMS view, the **minutes column matches the degrees column width** to keep each angular part visually aligned.
 - **All coordinate inputs and outputs are instantiated from the same field configuration** so formatting, widths, labels, and tab order remain in sync across the UI.
 
 ### Error States
