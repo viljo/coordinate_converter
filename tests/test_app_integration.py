@@ -22,10 +22,11 @@ def test_app_initialization_with_map():
     # Verify map view was created
     assert app.map_view is not None, "Map view was not created"
     
-    # Verify map URL is an http://localhost URL using embedded server
+    # Verify map URL is provided as an inline base64 data URL
     map_url = app._map_url()
-    assert map_url.startswith("http://localhost:"), f"Map URL should start with http://localhost:, got: {map_url}"
-    assert "leaflet.html" in map_url, f"Map URL should contain leaflet.html, got: {map_url}"
+    assert map_url.startswith(
+        "data:text/html;base64,"
+    ), f"Map URL should be a base64 data URL, got: {map_url}"
     
     print(f"✓ App initialized successfully")
     print(f"  Map URL: {map_url}")
@@ -45,11 +46,9 @@ def test_map_view_properties():
     # Check that map view has expand property
     assert app.map_view.expand is True, "Map view should have expand=True"
     
-    # Check that map view URL is localhost (embedded server)
-    assert app.map_view.url.startswith("http://localhost:"), \
-        f"Map view URL should use localhost server, got: {app.map_view.url}"
-    assert "leaflet.html" in app.map_view.url, \
-        f"Map view URL should contain leaflet.html, got: {app.map_view.url}"
+    # Check that map view URL uses inline data URL
+    assert app.map_view.url.startswith("data:text/html;base64,"), \
+        f"Map view URL should be a base64 data URL, got: {app.map_view.url}"
     
     print(f"✓ Map view properties are correct")
 
@@ -110,7 +109,7 @@ def test_map_center_update():
 def test_map_update_before_ready():
     """Test that map update is safe when map is not ready."""
     from app import main
-    
+
     mock_page = mock.MagicMock()
     mock_page.window_width = 1200
     mock_page.window_height = 800
@@ -132,10 +131,34 @@ def test_map_update_before_ready():
     print(f"✓ Map update is safely skipped when map is not ready")
 
 
+def test_double_click_capture_does_not_pan_map():
+    """Double-click capture should not trigger a map pan."""
+    from app import main
+
+    mock_page = mock.MagicMock()
+    mock_page.window_width = 1200
+    mock_page.window_height = 800
+
+    app = main.CoordinateApp(mock_page)
+
+    app.map_ready = True
+    app._invoke_map_js = mock.MagicMock(return_value=True)
+
+    app._set_input_coordinate_from_latlon(10.0, 20.0)
+
+    app._invoke_map_js.assert_not_called()
+
+    app._update_map(11.0, 22.0)
+
+    app._invoke_map_js.assert_called_once()
+
+    print("✓ Map stays put when capturing coordinates from double-click")
+
+
 def test_webview_deprecation_notice():
     """Display information about WebView deprecation."""
     import flet as ft
-    
+
     # Check if flet-webview is available
     try:
         import flet_webview

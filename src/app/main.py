@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -379,7 +378,6 @@ class CoordinateApp:
                 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 tile_url,
             )
-        # Use base64 encoding for better compatibility
         import base64
 
         map_html_b64 = base64.b64encode(map_html_content.encode("utf-8")).decode(
@@ -387,6 +385,7 @@ class CoordinateApp:
         )
         map_url = f"data:text/html;base64,{map_html_b64}"
         self.map_ready = False
+        self._suppress_map_update = False
 
         def on_console_message(e):
             try:
@@ -802,23 +801,50 @@ class CoordinateApp:
                 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 tile_url,
             )
-        return f"data:text/html,{urllib.parse.quote(inline_html)}"
+        import base64
+
+        encoded = base64.b64encode(inline_html.encode("utf-8")).decode("ascii")
+        return f"data:text/html;base64,{encoded}"
+
+    def _invoke_map_js(self, script: str) -> bool:
+        executed = False
+        if hasattr(self.map_view, "run_javascript"):
+            try:
+                self.map_view.run_javascript(script)
+                executed = True
+            except Exception as exc:  # pragma: no cover - logging only
+                print(f"[MAP] Error executing script via run_javascript: {exc}")
+                import traceback
+
+                traceback.print_exc()
+        if not executed and hasattr(self.map_view, "eval_js"):
+            try:
+                self.map_view.eval_js(script)
+                executed = True
+            except Exception as exc:  # pragma: no cover - logging only
+                print(f"[MAP] Error executing script via eval_js: {exc}")
+                import traceback
+
+                traceback.print_exc()
+        return executed
 
     def _handle_map_page_event(self, _event) -> None:
         print("[MAP] Page loaded, map is ready")
         self.map_ready = True
         # Ensure default map type is applied
-        if hasattr(self.map_view, "run_javascript"):
-            self.map_view.run_javascript("changeMapType('terrain');")
+        self._invoke_map_js("changeMapType('terrain');")
         if self.current_results.get("WGS84_GEO"):
             lat, lon, *_ = self.current_results["WGS84_GEO"]
             self._update_map(lat, lon)
 
     def _update_map(self, lat: float, lon: float) -> None:
-        if not self.map_ready:
+        if not self.map_ready or self._suppress_map_update:
             return
-        if hasattr(self.map_view, "run_javascript"):
-            self.map_view.run_javascript(f"updateMapCenter({lat}, {lon});")
+        command = f"updateMapCenter({lat}, {lon});"
+        if not self._invoke_map_js(command):
+            print(
+                f"[MAP] Unable to execute map update script. Available methods: {[m for m in dir(self.map_view) if 'java' in m.lower() or 'eval' in m.lower()]}"
+            )
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
@@ -1349,56 +1375,50 @@ class CoordinateApp:
             f"[MAP] Attempting to change map type to: {map_type}, map_ready={self.map_ready}"
         )
 
-        # Use run_javascript method (not eval_js)
-        if hasattr(self.map_view, "run_javascript"):
-            try:
-                self.map_view.run_javascript(f"changeMapType('{map_type}');")
-                print(f"[MAP] Successfully sent changeMapType command for {map_type}")
-            except Exception as e:
-                print(f"[MAP] Error changing map type: {e}")
-                import traceback
-
-                traceback.print_exc()
+        command = f"changeMapType('{map_type}');"
+        if self._invoke_map_js(command):
+            print(f"[MAP] Successfully sent changeMapType command for {map_type}")
         else:
             print(
-                f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}"
+                "[MAP] WebView does not have a JavaScript execution method. Available: "
+                f"{[m for m in dir(self.map_view) if 'java' in m.lower() or 'eval' in m.lower()]}"
             )
 
     def _set_input_coordinate_from_latlon(self, lat: float, lon: float) -> None:
-        # Ensure input type supports lat/lon without changing type
-        if self.input_coord_selector.value not in {
-            "WGS84_GEO_DD",
-            "SWEREF99_GEO_DD",
-            "WGS84_GEO_DDM",
-            "WGS84_GEO_DMS",
-            "SWEREF99_GEO_DDM",
-            "SWEREF99_GEO_DMS",
-            "FREE_TEXT",
-        }:
+        option = COORDINATE_OPTIONS.get(self.input_coord_selector.value)
+        if option is None:
             return
-        # Set values and trigger conversion
-        lat_field = self.input_fields.get("lat_deg")
-        lon_field = self.input_fields.get("lon_deg")
-        lat_dir_field = self.input_fields.get("lat_dir")
-        lon_dir_field = self.input_fields.get("lon_dir")
-        if self.input_coord_selector.value == "FREE_TEXT":
-            # Populate free text directly in DD (lat lon)
+
+        parsed = ParsedCoordinate(
+            crs=CRSCode.WGS84_GEO,
+            values=(lat, lon),
+            source_format="DD",
+            height=None,
+            height_system=self.input_height_selector.value,
+        )
+
+        self._suppress_map_update = True
+        try:
+            self._run_conversion(parsed)
+        finally:
+            self._suppress_map_update = False
+
+        if option.key == "FREE_TEXT":
             text_field = self.input_fields.get("text")
             if text_field is not None:
-                text_field.value = f"{lat} {lon}"
-                self._on_convert(None)
+                self._suspend_input_events = True
+                try:
+                    text_field.value = f"{lat:.6f} {lon:.6f}"
+                finally:
+                    self._suspend_input_events = False
+            self.page.update()
             return
-        if (
-            lat_field is not None
-            and lon_field is not None
-            and lat_dir_field is not None
-            and lon_dir_field is not None
-        ):
-            lat_dir_field.value = "N" if lat >= 0 else "S"
-            lon_dir_field.value = "E" if lon >= 0 else "W"
-            lat_field.value = f"{abs(lat):.6f}"
-            lon_field.value = f"{abs(lon):.6f}"
-            self._on_convert(None)
+
+        if not self.current_results:
+            return
+
+        self._populate_input_from_results(option)
+        self.page.update()
 
 
 def main(page: ft.Page) -> None:
