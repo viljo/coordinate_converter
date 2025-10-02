@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import math
-import os
-import urllib.parse
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import flet as ft
@@ -349,6 +346,9 @@ class CoordinateApp:
         self.input_accuracy_indicators: Dict[str, ft.Text] = {}
         self.current_accuracy_radius_m: Optional[float] = None
 
+        # Track map readiness (legacy attribute retained for compatibility)
+        self.map_ready = False
+
         self.input_fields: Dict[str, ft.TextField] = {}
         self.input_fields_container = ft.Column(spacing=8)
         self.input_height_field: Optional[ft.TextField] = None
@@ -369,25 +369,7 @@ class CoordinateApp:
         self._rebuild_input_fields()
         self._rebuild_output_fields()
 
-        # Map setup using data URL inline HTML
-        map_html_content = (
-            Path(__file__).resolve().parent / "map_view" / "leaflet.html"
-        ).read_text()
-        tile_url = os.getenv("OSM_TILE_URL")
-        if tile_url:
-            map_html_content = map_html_content.replace(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                tile_url,
-            )
-        # Use base64 encoding for better compatibility
-        import base64
-
-        map_html_b64 = base64.b64encode(map_html_content.encode("utf-8")).decode(
-            "ascii"
-        )
-        map_url = f"data:text/html;base64,{map_html_b64}"
-        self.map_ready = False
-
+        map_url = self._map_url()
         def on_console_message(e):
             try:
                 msg = str(getattr(e, "message", "")).strip()
@@ -427,11 +409,6 @@ class CoordinateApp:
 
         self.map_view = ft.WebView(**webview_kwargs)
 
-        print(f"[INIT] WebView created, type: {type(self.map_view)}")
-        print(
-            f"[INIT] WebView methods: {[m for m in dir(self.map_view) if not m.startswith('_')][:20]}"
-        )
-
         self.map_selector = ft.Dropdown(
             label="Map Type",
             options=[
@@ -441,9 +418,6 @@ class CoordinateApp:
             ],
             value="terrain",
             on_change=self._on_map_type_change,
-        )
-        print(
-            f"[INIT] Map selector created with on_change handler: {self._on_map_type_change}"
         )
 
         controls_column = ft.Column(
@@ -512,6 +486,14 @@ class CoordinateApp:
                 height=60,
             )
         )
+
+    @property
+    def map_ready(self) -> bool:
+        return getattr(self, "_map_ready", False)
+
+    @map_ready.setter
+    def map_ready(self, value: bool) -> None:
+        self._map_ready = bool(value)
 
     def _rebuild_input_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
@@ -1082,18 +1064,29 @@ class CoordinateApp:
         indicator.value = f"Accuracy ≈ {self._format_accuracy_value(meters)}"
         indicator.visible = True
 
+    def _run_map_script(self, script: str) -> None:
+        if not script or not getattr(self, "map_view", None):
+            return
+        try:
+            if hasattr(self.map_view, "eval_js"):
+                self.map_view.eval_js(script)
+            elif hasattr(self.map_view, "run_javascript"):
+                self.map_view.run_javascript(script)
+        except Exception:
+            pass
+
     def _apply_accuracy_overlay(self) -> None:
-        if not self.map_ready or not hasattr(self.map_view, "run_javascript"):
+        if not getattr(self, "map_ready", False):
             return
         if self.current_accuracy_radius_m is None:
-            self.map_view.run_javascript("clearAccuracyOverlay();")
+            self._run_map_script("clearAccuracyOverlay();")
             return
         latlon = self.current_results.get("WGS84_GEO")
         if not isinstance(latlon, (list, tuple)) or len(latlon) < 2:
-            self.map_view.run_javascript("clearAccuracyOverlay();")
+            self._run_map_script("clearAccuracyOverlay();")
             return
         lat, lon = float(latlon[0]), float(latlon[1])
-        self.map_view.run_javascript(
+        self._run_map_script(
             f"updateAccuracyOverlay({lat}, {lon}, {self.current_accuracy_radius_m});"
         )
 
@@ -1156,34 +1149,32 @@ class CoordinateApp:
         self.page.update()
 
     def _map_url(self) -> str:
-        inline_html = (
-            Path(__file__).resolve().parent / "map_view" / "leaflet.html"
-        ).read_text()
-        tile_url = os.getenv("OSM_TILE_URL")
-        if tile_url:
-            inline_html = inline_html.replace(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                tile_url,
-            )
-        return f"data:text/html,{urllib.parse.quote(inline_html)}"
+        asset_path = "map_view/leaflet.html"
+        if hasattr(self.page, "get_asset_url"):
+            try:
+                url = self.page.get_asset_url(asset_path)
+                if url:
+                    return url
+            except Exception:
+                pass
+        # Fallback for environments without asset server (e.g., tests with MagicMock)
+        return f"http://localhost:0/assets/{asset_path}"
 
     def _handle_map_page_event(self, _event) -> None:
-        print("[MAP] Page loaded, map is ready")
         self.map_ready = True
         # Ensure default map type is applied
-        if hasattr(self.map_view, "run_javascript"):
-            self.map_view.run_javascript("changeMapType('terrain');")
+        map_type = self.map_selector.value or "terrain"
+        self._run_map_script(f"changeMapType('{map_type}');")
         if self.current_results.get("WGS84_GEO"):
             lat, lon, *_ = self.current_results["WGS84_GEO"]
             self._update_map(lat, lon)
             self._apply_accuracy_overlay()
 
     def _update_map(self, lat: float, lon: float) -> None:
-        if not self.map_ready:
+        if not getattr(self, "map_ready", False):
             return
-        if hasattr(self.map_view, "run_javascript"):
-            self.map_view.run_javascript(f"updateMapCenter({lat}, {lon});")
-            self._apply_accuracy_overlay()
+        self._run_map_script(f"updateMapCenter({lat}, {lon});")
+        self._apply_accuracy_overlay()
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
@@ -1701,9 +1692,6 @@ class CoordinateApp:
         self.page.update()
 
     def _on_map_type_change(self, event) -> None:
-        print(f"[MAP] _on_map_type_change called! Event: {event}")
-        print(f"[MAP] Current selector value: {self.map_selector.value}")
-
         map_type = self.map_selector.value
         if not map_type:
             map_type = "terrain"
@@ -1711,25 +1699,8 @@ class CoordinateApp:
             map_type = "terrain"
         self.map_selector.value = map_type
         self.map_selector.update()
-
-        print(
-            f"[MAP] Attempting to change map type to: {map_type}, map_ready={self.map_ready}"
-        )
-
-        # Use run_javascript method (not eval_js)
-        if hasattr(self.map_view, "run_javascript"):
-            try:
-                self.map_view.run_javascript(f"changeMapType('{map_type}');")
-                print(f"[MAP] Successfully sent changeMapType command for {map_type}")
-            except Exception as e:
-                print(f"[MAP] Error changing map type: {e}")
-                import traceback
-
-                traceback.print_exc()
-        else:
-            print(
-                f"[MAP] WebView does not have run_javascript method. Available: {[m for m in dir(self.map_view) if 'java' in m.lower()]}"
-            )
+        if getattr(self, "map_ready", False):
+            self._run_map_script(f"changeMapType('{map_type}');")
 
     def _set_input_coordinate_from_latlon(self, lat: float, lon: float) -> None:
         # Ensure input type supports lat/lon without changing type
