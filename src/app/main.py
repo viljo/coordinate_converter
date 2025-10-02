@@ -356,6 +356,11 @@ class CoordinateApp:
         self.output_fields_container = ft.Column(spacing=8)
 
         self._suspend_input_events = False
+        self._current_option: Optional[CoordinateOption] = None
+        self._row_accuracy_labels: Dict[str, ft.Text] = {}
+        self._field_accuracy_labels: Dict[str, ft.Text] = {}
+        self._row_specs: Dict[str, List[FieldSpec]] = {}
+        self._field_specs: Dict[str, FieldSpec] = {}
 
         self.current_parsed: Optional[ParsedCoordinate] = None
         self.current_results: Dict[str, List[float] | Tuple[float, ...] | str] = {}
@@ -514,9 +519,14 @@ class CoordinateApp:
 
     def _rebuild_input_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.input_coord_selector.value]
+        self._current_option = option
         self.input_fields.clear()
         controls: List[ft.Control] = []
         self._suspend_input_events = True
+        self._row_accuracy_labels = {}
+        self._field_accuracy_labels = {}
+        self._row_specs = {}
+        self._field_specs = {spec.name: spec for spec in option.fields}
 
         # Use UIBuilder for DD/DDM/DMS formats
         # UIBuilder callbacks receive event object only, not FieldSpec
@@ -543,6 +553,8 @@ class CoordinateApp:
             self.input_fields["lat_dir"].on_focus = make_on_focus("lat_dir", "N/S")
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
+            self._row_specs["lat"] = self._specs_with_prefix(option, "lat")
+            self._row_specs["lon"] = self._specs_with_prefix(option, "lon")
 
         elif option.source_format == "DDM":
             controls = ui_builder.UIBuilder.build_ddm_input_fields(
@@ -566,6 +578,8 @@ class CoordinateApp:
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
+            self._row_specs["lat"] = self._specs_with_prefix(option, "lat")
+            self._row_specs["lon"] = self._specs_with_prefix(option, "lon")
 
         elif option.source_format == "DMS":
             controls = ui_builder.UIBuilder.build_dms_input_fields(
@@ -593,6 +607,8 @@ class CoordinateApp:
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
             self.input_fields["lon_sec"].on_focus = make_on_focus("lon_sec", "Seconds")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
+            self._row_specs["lat"] = self._specs_with_prefix(option, "lat")
+            self._row_specs["lon"] = self._specs_with_prefix(option, "lon")
         else:
             # Legacy formats (RT90, XYZ, MGRS, etc.)
             self.input_tab_order = []
@@ -624,14 +640,24 @@ class CoordinateApp:
                 self.input_fields[spec.name] = field
                 self.input_tab_order.append(spec.name)
                 accuracy = self._accuracy_from_specs([spec])
-                controls.append(self._wrap_with_accuracy(field, accuracy))
+                if accuracy is not None:
+                    controls.append(
+                        self._wrap_with_accuracy(field, accuracy, spec.name)
+                    )
+                else:
+                    controls.append(field)
 
         if option.source_format in {"DD", "DDM", "DMS"}:
-            accuracies = [
-                self._accuracy_from_specs(self._specs_with_prefix(option, "lat")),
-                self._accuracy_from_specs(self._specs_with_prefix(option, "lon")),
+            row_accuracies = [
+                ("lat", self._accuracy_from_specs(self._row_specs.get("lat", []))),
+                ("lon", self._accuracy_from_specs(self._row_specs.get("lon", []))),
             ]
-            self._apply_accuracy_to_rows(controls, accuracies)
+            self._apply_accuracy_to_rows(controls, row_accuracies)
+
+        for name, field in self.input_fields.items():
+            field.on_change = lambda _e, field_name=name: self._on_input_change(
+                field_name
+            )
 
         self.input_height_row.controls = [self.input_height_selector]
         if option.separate_height:
@@ -660,38 +686,73 @@ class CoordinateApp:
         return [spec for spec in option.fields if spec.name.startswith(prefix)]
 
     def _apply_accuracy_to_rows(
-        self, controls: List[ft.Control], accuracies: List[Optional[str]]
+        self,
+        controls: List[ft.Control],
+        row_accuracies: List[Tuple[str, Optional[str]]],
     ) -> None:
         row_index = 0
         for control in controls:
-            if isinstance(control, ft.Row) and row_index < len(accuracies):
-                self._append_accuracy_to_row(control, accuracies[row_index])
+            if isinstance(control, ft.Row) and row_index < len(row_accuracies):
+                key, accuracy = row_accuracies[row_index]
+                self._append_accuracy_to_row(control, key, accuracy)
                 row_index += 1
 
     def _append_accuracy_to_row(
-        self, row: ft.Row, accuracy: Optional[str]
+        self, row: ft.Row, key: str, accuracy: Optional[str]
     ) -> None:
-        if not accuracy:
-            return
         row.vertical_alignment = ft.CrossAxisAlignment.CENTER
-        row.controls.append(
-            ft.Text(accuracy, size=12, color=ft.Colors.ON_SURFACE_VARIANT)
-        )
+        accuracy_text = self._row_accuracy_labels.get(key)
+        if accuracy_text is None:
+            accuracy_text = ft.Text(
+                accuracy or "", size=12, color=ft.Colors.ON_SURFACE_VARIANT
+            )
+            self._row_accuracy_labels[key] = accuracy_text
+            row.controls.append(accuracy_text)
+        else:
+            accuracy_text.value = accuracy or ""
+            if accuracy_text not in row.controls:
+                row.controls.append(accuracy_text)
 
     def _wrap_with_accuracy(
-        self, control: ft.Control, accuracy: Optional[str]
+        self, control: ft.Control, accuracy: Optional[str], field_name: str
     ) -> ft.Control:
         if not accuracy:
             return control
+        accuracy_text = ft.Text(
+            accuracy, size=12, color=ft.Colors.ON_SURFACE_VARIANT
+        )
+        self._field_accuracy_labels[field_name] = accuracy_text
         return ft.Row(
             controls=[
                 control,
-                ft.Text(accuracy, size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                accuracy_text,
             ],
             spacing=8,
             alignment=ft.MainAxisAlignment.START,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
+
+    def _decimals_from_field_value(self, field_name: str) -> Optional[int]:
+        field = self.input_fields.get(field_name)
+        if not field or field.value is None:
+            return None
+        text = field.value.strip()
+        if not text:
+            return None
+        normalized = text.replace(",", ".")
+        if normalized.count(".") > 1:
+            return None
+        sign_stripped = normalized.lstrip("+-")
+        if not sign_stripped:
+            return None
+        if "." in sign_stripped:
+            integer_part, fractional_part = sign_stripped.split(".", 1)
+            if integer_part and not integer_part.isdigit():
+                return None
+            if not fractional_part.isdigit():
+                return None
+            return len(fractional_part)
+        return 0 if sign_stripped.isdigit() else None
 
     def _accuracy_from_specs(self, specs: List[FieldSpec]) -> Optional[str]:
         if not specs:
@@ -705,21 +766,80 @@ class CoordinateApp:
             return None
         preferred_order = ("_sec", "_min", "_deg")
         selected: Optional[FieldSpec] = None
+        selected_decimals: Optional[int] = None
+        fallback: Optional[FieldSpec] = None
         for suffix in preferred_order:
             for spec in numeric_specs:
                 if spec.name.endswith(suffix):
-                    selected = spec
-                    break
+                    decimals_override = self._decimals_from_field_value(spec.name)
+                    if decimals_override is not None:
+                        selected = spec
+                        selected_decimals = decimals_override
+                        break
+                    if fallback is None:
+                        fallback = spec
             if selected is not None:
                 break
         if selected is None:
-            selected = max(numeric_specs, key=lambda s: (s.decimals, s.name))
+            if fallback is not None:
+                selected = fallback
+                selected_decimals = self._decimals_from_field_value(selected.name)
+            else:
+                selected = max(numeric_specs, key=lambda s: (s.decimals, s.name))
+                selected_decimals = self._decimals_from_field_value(selected.name)
+        if selected_decimals is None:
+            selected_decimals = self._decimals_from_field_value(selected.name)
+        decimals_value = (
+            selected_decimals if selected_decimals is not None else selected.decimals
+        )
         return ui_builder.UIBuilder.accuracy_label(
-            decimals=selected.decimals,
+            decimals=decimals_value,
             is_angle=selected.is_angle,
             format_mode=selected.format_mode,
             field_name=selected.name,
         )
+
+    def _row_key_for_field(self, field_name: str) -> Optional[str]:
+        for key, specs in self._row_specs.items():
+            if any(spec.name == field_name for spec in specs):
+                return key
+        return None
+
+    def _update_accuracy_for_field(self, field_name: str) -> bool:
+        accuracy_text = self._field_accuracy_labels.get(field_name)
+        spec = self._field_specs.get(field_name)
+        if accuracy_text is None or spec is None:
+            return False
+        new_value = self._accuracy_from_specs([spec]) or ""
+        if accuracy_text.value == new_value:
+            return False
+        accuracy_text.value = new_value
+        return True
+
+    def _update_row_accuracy(self, row_key: str) -> bool:
+        accuracy_text = self._row_accuracy_labels.get(row_key)
+        specs = self._row_specs.get(row_key)
+        if accuracy_text is None or not specs:
+            return False
+        new_value = self._accuracy_from_specs(specs) or ""
+        if accuracy_text.value == new_value:
+            return False
+        accuracy_text.value = new_value
+        return True
+
+    def _refresh_accuracy_for_change(self, field_name: Optional[str]) -> bool:
+        updated = False
+        if field_name:
+            updated |= self._update_accuracy_for_field(field_name)
+            row_key = self._row_key_for_field(field_name)
+            if row_key:
+                updated |= self._update_row_accuracy(row_key)
+        else:
+            for name in list(self._field_accuracy_labels):
+                updated |= self._update_accuracy_for_field(name)
+            for row_key in list(self._row_accuracy_labels):
+                updated |= self._update_row_accuracy(row_key)
+        return updated
 
     def _populate_input_from_results(self, option: CoordinateOption) -> None:
         if not self.current_results:
@@ -836,6 +956,9 @@ class CoordinateApp:
                     self.input_height_field.value = f"{float(height_values[0]):.3f}"
         finally:
             self._suspend_input_events = False
+
+        if self._refresh_accuracy_for_change(None):
+            self.page.update()
 
     def _rebuild_output_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.output_coord_selector.value]
@@ -1063,12 +1186,16 @@ class CoordinateApp:
                 return False
         return True
 
-    def _on_input_change(self, _field_name: Optional[str] = None) -> None:
+    def _on_input_change(self, field_name: Optional[str] = None) -> None:
         if self._suspend_input_events:
             return
+        accuracy_changed = self._refresh_accuracy_for_change(field_name)
         if not self._inputs_complete():
+            if accuracy_changed:
+                self.page.update()
             return
         self._on_convert(None)
+        self.page.update()
 
     def _on_convert(self, _event) -> None:
         try:
