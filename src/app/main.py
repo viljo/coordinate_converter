@@ -340,10 +340,6 @@ class CoordinateApp:
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
-        output_height_accuracy = self._accuracy_from_specs(
-            [FieldSpec("height", HEIGHT_LABEL, decimals=3)]
-        )
-        self._append_accuracy_to_row(self.output_height_row, output_height_accuracy)
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
@@ -646,8 +642,6 @@ class CoordinateApp:
                 on_change=lambda e: self._on_input_change("height"),
             )
             self.input_height_row.controls.append(self.input_height_field)
-            height_accuracy = self._accuracy_from_specs([height_spec])
-            self._append_accuracy_to_row(self.input_height_row, height_accuracy)
             self.input_height_row.visible = True
             # Add height to tab order after the coordinate fields
             self.input_tab_order.append("height")
@@ -864,15 +858,7 @@ class CoordinateApp:
                     read_only=True,
                 )
                 self.output_fields[spec.name] = field
-                accuracy = self._accuracy_from_specs([spec])
-                controls.append(self._wrap_with_accuracy(field, accuracy))
-
-        if option.source_format in {"DD", "DDM", "DMS"}:
-            accuracies = [
-                self._accuracy_from_specs(self._specs_with_prefix(option, "lat")),
-                self._accuracy_from_specs(self._specs_with_prefix(option, "lon")),
-            ]
-            self._apply_accuracy_to_rows(controls, accuracies)
+                controls.append(field)
 
         self.output_fields_container.controls = controls
         self.output_height_row.visible = option.separate_height
