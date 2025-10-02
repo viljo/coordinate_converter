@@ -385,6 +385,7 @@ class CoordinateApp:
         )
         map_url = f"data:text/html;base64,{map_html_b64}"
         self.map_ready = False
+        self._suppress_map_update = False
 
         def on_console_message(e):
             try:
@@ -837,7 +838,7 @@ class CoordinateApp:
             self._update_map(lat, lon)
 
     def _update_map(self, lat: float, lon: float) -> None:
-        if not self.map_ready:
+        if not self.map_ready or self._suppress_map_update:
             return
         command = f"updateMapCenter({lat}, {lon});"
         if not self._invoke_map_js(command):
@@ -1396,7 +1397,11 @@ class CoordinateApp:
             height_system=self.input_height_selector.value,
         )
 
-        self._run_conversion(parsed)
+        self._suppress_map_update = True
+        try:
+            self._run_conversion(parsed)
+        finally:
+            self._suppress_map_update = False
 
         if option.key == "FREE_TEXT":
             text_field = self.input_fields.get("text")

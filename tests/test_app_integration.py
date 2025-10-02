@@ -109,7 +109,7 @@ def test_map_center_update():
 def test_map_update_before_ready():
     """Test that map update is safe when map is not ready."""
     from app import main
-    
+
     mock_page = mock.MagicMock()
     mock_page.window_width = 1200
     mock_page.window_height = 800
@@ -131,10 +131,34 @@ def test_map_update_before_ready():
     print(f"✓ Map update is safely skipped when map is not ready")
 
 
+def test_double_click_capture_does_not_pan_map():
+    """Double-click capture should not trigger a map pan."""
+    from app import main
+
+    mock_page = mock.MagicMock()
+    mock_page.window_width = 1200
+    mock_page.window_height = 800
+
+    app = main.CoordinateApp(mock_page)
+
+    app.map_ready = True
+    app._invoke_map_js = mock.MagicMock(return_value=True)
+
+    app._set_input_coordinate_from_latlon(10.0, 20.0)
+
+    app._invoke_map_js.assert_not_called()
+
+    app._update_map(11.0, 22.0)
+
+    app._invoke_map_js.assert_called_once()
+
+    print("✓ Map stays put when capturing coordinates from double-click")
+
+
 def test_webview_deprecation_notice():
     """Display information about WebView deprecation."""
     import flet as ft
-    
+
     # Check if flet-webview is available
     try:
         import flet_webview
