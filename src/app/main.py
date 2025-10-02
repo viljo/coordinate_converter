@@ -334,6 +334,7 @@ class CoordinateApp:
             helper_text="",
             width=ui_builder.UIBuilder.coordinate_width("height"),
             text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
+            suffix_text="m",
         )
         self.output_height_copy_button = self._make_copy_button(
             "Copy height",
@@ -952,14 +953,14 @@ class CoordinateApp:
 
     def _make_copy_button(
         self, tooltip: str, handler: Callable[[ft.ControlEvent], None]
-    ) -> ft.IconButton:
-        return ft.IconButton(
+    ) -> ft.Control:
+        button = ft.IconButton(
             icon=ft.Icons.CONTENT_COPY,
-            tooltip=tooltip,
             icon_size=18,
             on_click=handler,
             style=ft.ButtonStyle(padding=ft.padding.all(6)),
         )
+        return ft.Container(content=button, tooltip=tooltip)
 
     @staticmethod
     def _compact_value(text: str | None) -> str:
