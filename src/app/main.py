@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import flet as ft
 
@@ -335,14 +335,32 @@ class CoordinateApp:
             width=ui_builder.UIBuilder.coordinate_width("height"),
             text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
         )
+        self.output_height_copy_button = self._make_copy_button(
+            "Copy height",
+            self._copy_height_value,
+        )
         self.output_height_row = ft.Row(
-            controls=[self.output_height_selector, self.output_height_field],
+            controls=[
+                self.output_height_selector,
+                self.output_height_field,
+                self.output_height_copy_button,
+            ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
+        self.formatted_text_copy_button = self._make_copy_button(
+            "Copy formatted coordinate",
+            self._copy_formatted_text,
+        )
+        self.formatted_text_row = ft.Row(
+            controls=[self.formatted_text, self.formatted_text_copy_button],
+            spacing=4,
+            alignment=ft.MainAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
         # Accuracy indicators (input rows only)
         self.input_accuracy_text = ft.Text(
             value="", size=11, color=ft.Colors.ON_SURFACE_VARIANT
@@ -473,7 +491,7 @@ class CoordinateApp:
                 ft.Divider(),
                 self.status_text,
                 self.warning_text,
-                self.formatted_text,
+                self.formatted_text_row,
             ],
             expand=True,
         )
@@ -786,7 +804,48 @@ class CoordinateApp:
                 self.output_fields[spec.name] = field
                 controls.append(field)
 
-        self.output_fields_container.controls = controls
+        enhanced_controls: List[ft.Control] = []
+        i = 0
+        while i < len(controls):
+            control = controls[i]
+            if (
+                isinstance(control, ft.Text)
+                and i + 1 < len(controls)
+                and isinstance(controls[i + 1], ft.Row)
+            ):
+                label_control = control
+                row_control = controls[i + 1]
+                row_control.vertical_alignment = ft.CrossAxisAlignment.CENTER
+                tooltip_label = label_control.value.rstrip(":") or "Coordinate"
+                copy_button = self._make_copy_button(
+                    f"Copy {tooltip_label}",
+                    lambda _e, lbl=label_control.value, row=row_control: self._copy_output_row(
+                        lbl, row
+                    ),
+                )
+                row_control.controls.append(copy_button)
+                enhanced_controls.append(label_control)
+                enhanced_controls.append(row_control)
+                i += 2
+                continue
+            if isinstance(control, ft.TextField):
+                copy_button = self._make_copy_button(
+                    f"Copy {control.label or 'value'}",
+                    lambda _e, field=control: self._copy_single_field(field),
+                )
+                enhanced_controls.append(
+                    ft.Row(
+                        controls=[control, copy_button],
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        alignment=ft.MainAxisAlignment.START,
+                    )
+                )
+            else:
+                enhanced_controls.append(control)
+            i += 1
+
+        self.output_fields_container.controls = enhanced_controls
         self.output_height_row.visible = option.separate_height
         self._update_output_height_display()
         self.page.update()
@@ -889,6 +948,92 @@ class CoordinateApp:
         self.output_height_field.helper_text = helper
         if self.output_height_field.page is not None:
             self.output_height_field.update()
+
+    def _make_copy_button(
+        self, tooltip: str, handler: Callable[[ft.ControlEvent], None]
+    ) -> ft.IconButton:
+        return ft.IconButton(
+            icon=ft.Icons.CONTENT_COPY,
+            tooltip=tooltip,
+            icon_size=18,
+            on_click=handler,
+            style=ft.ButtonStyle(padding=ft.padding.all(6)),
+        )
+
+    def _copy_single_field(self, field: ft.TextField) -> None:
+        label = (field.label or "").strip()
+        value = (field.value or "").strip()
+        if label and value:
+            text = f"{label}: {value}"
+        elif value:
+            text = value
+        else:
+            text = label
+        self._copy_text(text)
+
+    def _copy_output_row(self, label_text: str, row: ft.Row) -> None:
+        base_label = label_text.strip()
+        values: List[str] = []
+        for ctrl in row.controls:
+            if isinstance(ctrl, ft.TextField):
+                value = (ctrl.value or "").strip()
+                if value:
+                    values.append(value)
+        if values:
+            text = f"{base_label} {' '.join(values)}"
+        else:
+            text = base_label
+        self._copy_text(text)
+
+    def _copy_height_value(self, _event) -> None:
+        label = (self.output_height_field.label or "Height").strip()
+        value = (self.output_height_field.value or "").strip()
+        helper = (self.output_height_field.helper_text or "").strip()
+        if value:
+            text = f"{label}: {value}"
+        else:
+            text = label
+        if helper:
+            text = f"{text} ({helper})"
+        self._copy_text(text)
+
+    def _copy_formatted_text(self, _event) -> None:
+        text = (self.formatted_text.value or "").strip()
+        self._copy_text(text)
+
+    def _copy_text(self, text: str) -> None:
+        ascii_text = self._sanitize_ascii(text)
+        setter = getattr(self.page, "set_clipboard", None)
+        if callable(setter) and ascii_text:
+            try:
+                setter(ascii_text)
+            except Exception:
+                pass
+        self.status_text.value = (
+            f"Copied to clipboard: {ascii_text}" if ascii_text else "Nothing to copy"
+        )
+        if self.status_text.page is not None:
+            self.status_text.update()
+
+    @staticmethod
+    def _sanitize_ascii(text: str) -> str:
+        replacements = {
+            "°": " deg",
+            "º": " deg",
+            "′": "'",
+            "’": "'",
+            "″": '"',
+            "“": '"',
+            "”": '"',
+        }
+        cleaned = text or ""
+        for src, dst in replacements.items():
+            cleaned = cleaned.replace(src, dst)
+        try:
+            ascii_text = cleaned.encode("ascii", "ignore").decode("ascii")
+        except Exception:
+            ascii_text = cleaned
+        return " ".join(ascii_text.strip().split())
 
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
