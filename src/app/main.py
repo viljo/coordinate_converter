@@ -749,6 +749,10 @@ class CoordinateApp:
         text = field.value.strip()
         if not text:
             return None
+        if field_name == "mgrs":
+            # MGRS precision is derived from the number of easting/northing digits,
+            # which are evaluated separately in _accuracy_for_mgrs_field.
+            return None
         normalized = text.replace(",", ".")
         if normalized.count(".") > 1:
             return None
@@ -767,6 +771,8 @@ class CoordinateApp:
     def _accuracy_from_specs(self, specs: List[FieldSpec]) -> Optional[str]:
         if not specs:
             return None
+        if len(specs) == 1 and specs[0].name == "mgrs":
+            return self._accuracy_for_mgrs_field()
         numeric_specs = [
             spec
             for spec in specs
@@ -802,6 +808,44 @@ class CoordinateApp:
             format_mode=selected_spec.format_mode,
             field_name=selected_spec.name,
         )
+
+    def _accuracy_for_mgrs_field(self) -> Optional[str]:
+        field = self.input_fields.get("mgrs")
+        if field is None:
+            return None
+        value = field.value or ""
+        text = value.strip().upper()
+        if not text:
+            return None
+        normalized = "".join(ch for ch in text if not ch.isspace())
+        index = 0
+        while index < len(normalized) and normalized[index].isdigit():
+            index += 1
+        if index == 0 or index >= len(normalized):
+            return None
+        remaining = normalized[index:]
+        if len(remaining) < 3:
+            return None
+        if not all(remaining[pos].isalpha() for pos in range(3)):
+            return None
+        digits_part = remaining[3:]
+        if any(not ch.isdigit() for ch in digits_part):
+            return None
+        digits_length = len(digits_part)
+        if digits_length % 2 != 0 or digits_length > 10:
+            return None
+        precision_map = {
+            0: 100_000.0,
+            2: 10_000.0,
+            4: 1_000.0,
+            6: 100.0,
+            8: 10.0,
+            10: 1.0,
+        }
+        meters = precision_map.get(digits_length)
+        if meters is None:
+            return None
+        return ui_builder.UIBuilder._format_accuracy(meters)
 
     def _row_key_for_field(self, field_name: str) -> Optional[str]:
         for key, specs in self._row_specs.items():
