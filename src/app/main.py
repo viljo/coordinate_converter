@@ -971,6 +971,13 @@ class CoordinateApp:
         self._copy_text(text)
 
     def _copy_output_row(self, label_text: str, row: ft.Row) -> None:
+        option = COORDINATE_OPTIONS.get(self.output_coord_selector.value)
+        if option and option.source_format in {"DDM", "DMS"}:
+            axis = "lat" if label_text.lower().startswith("lat") else "lon"
+            formatted = self._format_output_angle(option.source_format, axis)
+            if formatted:
+                self._copy_text(formatted)
+                return
         values: List[str] = []
         for ctrl in row.controls:
             if isinstance(ctrl, ft.TextField):
@@ -1031,6 +1038,15 @@ class CoordinateApp:
         option = COORDINATE_OPTIONS.get(self.output_coord_selector.value)
         if not option:
             return ""
+        if option.source_format in {"DDM", "DMS"}:
+            values: List[str] = []
+            lat_value = self._format_output_angle(option.source_format, "lat")
+            lon_value = self._format_output_angle(option.source_format, "lon")
+            if lat_value:
+                values.append(lat_value)
+            if lon_value:
+                values.append(lon_value)
+            return ",".join(values)
         values: List[str] = []
         for spec in option.fields:
             field = self.output_fields.get(spec.name)
@@ -1061,6 +1077,54 @@ class CoordinateApp:
         minutes = int(minutes_full)
         seconds = (minutes_full - minutes) * 60
         return f"{degrees}° {minutes}' {seconds:.2f}\" {sign}"
+
+    def _format_output_angle(self, fmt: str, axis: str) -> str:
+        axis_key = "lat" if axis.startswith("lat") else "lon"
+        direction_field = self.output_fields.get(f"{axis_key}_dir")
+        direction = self._compact_value(direction_field.value) if isinstance(direction_field, ft.TextField) else ""
+        direction = direction.upper()
+        if fmt == "DDM":
+            return self._format_ddm_angle(axis_key, direction)
+        if fmt == "DMS":
+            return self._format_dms_angle(axis_key, direction)
+        return ""
+
+    def _format_ddm_angle(self, axis: str, direction: str) -> str:
+        deg_field = self.output_fields.get(f"{axis}_deg")
+        min_field = self.output_fields.get(f"{axis}_min")
+        if not isinstance(deg_field, ft.TextField) or not isinstance(min_field, ft.TextField):
+            return ""
+        try:
+            degrees_value = abs(int(float(deg_field.value or "0")))
+            minutes_value = abs(float(min_field.value or "0"))
+        except (TypeError, ValueError):
+            return ""
+        degree_width = 3 if axis == "lon" else 2
+        degrees_text = f"{degrees_value:0{degree_width}d}"
+        minutes_text = f"{minutes_value:07.4f}"
+        return f"{degrees_text}deg{minutes_text}'{direction}"
+
+    def _format_dms_angle(self, axis: str, direction: str) -> str:
+        deg_field = self.output_fields.get(f"{axis}_deg")
+        min_field = self.output_fields.get(f"{axis}_min")
+        sec_field = self.output_fields.get(f"{axis}_sec")
+        if (
+            not isinstance(deg_field, ft.TextField)
+            or not isinstance(min_field, ft.TextField)
+            or not isinstance(sec_field, ft.TextField)
+        ):
+            return ""
+        try:
+            degrees_value = abs(int(float(deg_field.value or "0")))
+            minutes_value = abs(int(float(min_field.value or "0")))
+            seconds_value = abs(float(sec_field.value or "0"))
+        except (TypeError, ValueError):
+            return ""
+        degree_width = 3 if axis == "lon" else 2
+        degrees_text = f"{degrees_value:0{degree_width}d}"
+        minutes_text = f"{minutes_value:02d}"
+        seconds_text = f"{seconds_value:05.2f}"
+        return f"{degrees_text}deg{minutes_text}'{seconds_text}\"{direction}"
 
     def _on_input_type_change(self, _event) -> None:
         self._rebuild_input_fields()
