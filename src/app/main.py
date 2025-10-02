@@ -1095,14 +1095,16 @@ class CoordinateApp:
         if not isinstance(deg_field, ft.TextField) or not isinstance(min_field, ft.TextField):
             return ""
         try:
-            degrees_value = abs(int(float(deg_field.value or "0")))
+            degrees_raw = float(deg_field.value or "0")
+            degrees_value = abs(int(degrees_raw))
             minutes_value = abs(float(min_field.value or "0"))
         except (TypeError, ValueError):
             return ""
         degree_width = 3 if axis == "lon" else 2
         degrees_text = f"{degrees_value:0{degree_width}d}"
-        minutes_text = f"{minutes_value:07.4f}"
-        return f"{degrees_text}deg{minutes_text}'{direction}"
+        minutes_text = f"{minutes_value:05.4f}".rjust(7, "0")
+        sign = self._angle_sign(axis, direction, degrees_raw)
+        return f"{sign}{degrees_text}{minutes_text}"
 
     def _format_dms_angle(self, axis: str, direction: str) -> str:
         deg_field = self.output_fields.get(f"{axis}_deg")
@@ -1115,7 +1117,8 @@ class CoordinateApp:
         ):
             return ""
         try:
-            degrees_value = abs(int(float(deg_field.value or "0")))
+            degrees_raw = float(deg_field.value or "0")
+            degrees_value = abs(int(degrees_raw))
             minutes_value = abs(int(float(min_field.value or "0")))
             seconds_value = abs(float(sec_field.value or "0"))
         except (TypeError, ValueError):
@@ -1124,7 +1127,23 @@ class CoordinateApp:
         degrees_text = f"{degrees_value:0{degree_width}d}"
         minutes_text = f"{minutes_value:02d}"
         seconds_text = f"{seconds_value:05.2f}"
-        return f"{degrees_text}deg{minutes_text}'{seconds_text}\"{direction}"
+        sign = self._angle_sign(axis, direction, degrees_raw)
+        return f"{sign}{degrees_text}{minutes_text}{seconds_text}"
+
+    @staticmethod
+    def _angle_sign(axis: str, direction: str, degrees_raw: float) -> str:
+        direction = (direction or "").upper()
+        if axis == "lat":
+            if direction == "S":
+                return "-"
+            if direction == "N":
+                return "+"
+        else:
+            if direction == "W":
+                return "-"
+            if direction == "E":
+                return "+"
+        return "-" if degrees_raw < 0 else "+"
 
     def _on_input_type_change(self, _event) -> None:
         self._rebuild_input_fields()
