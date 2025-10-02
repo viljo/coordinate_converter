@@ -512,16 +512,24 @@ class CoordinateApp:
             # Legacy formats (RT90, XYZ, MGRS, etc.)
             self.input_tab_order = []
             for index, spec in enumerate(option.fields):
-                field = ft.TextField(
-                    label=spec.label,
-                    autofocus=index == 0,
-                    multiline=spec.name in {"mgrs", "text"},
-                    width=ui_builder.UIBuilder.coordinate_width(spec.name, spec.format_mode),
-                )
-                if spec.name != "mgrs":
-                    field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
-                    field.on_blur = self._on_input_blur
-                field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
+                if spec.name == "text":
+                    field = ft.TextField(
+                        label=spec.label,
+                        autofocus=index == 0,
+                        multiline=True,
+                        width=ui_builder.UIBuilder.coordinate_width(spec.name, spec.format_mode),
+                    )
+                    field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
+                else:
+                    field = ui_builder.UIBuilder.create_coordinate_field(
+                        name=spec.name,
+                        format_mode=spec.format_mode,
+                        autofocus=index == 0,
+                    )
+                    if spec.name != "mgrs":
+                        field.on_focus = lambda _e, s=spec: self._on_input_focus(s)
+                        field.on_blur = self._on_input_blur
+                    field.on_change = lambda _e, name=spec.name: self._on_input_change(name)
                 self.input_fields[spec.name] = field
                 self.input_tab_order.append(spec.name)
                 controls.append(field)
@@ -662,11 +670,10 @@ class CoordinateApp:
         else:
             # Legacy formats
             for spec in option.fields:
-                field = ft.TextField(
-                    label=spec.label,
+                field = ui_builder.UIBuilder.create_coordinate_field(
+                    name=spec.name,
+                    format_mode=spec.format_mode,
                     read_only=True,
-                    width=ui_builder.UIBuilder.coordinate_width(spec.name, spec.format_mode),
-                    text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
                 )
                 self.output_fields[spec.name] = field
                 controls.append(field)

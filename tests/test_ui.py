@@ -168,3 +168,12 @@ def test_dms_minutes_share_degree_width():
     assert input_registry["lon_min"].width == input_registry["lon_deg"].width
     assert output_registry["lat_min"].width == output_registry["lat_deg"].width
     assert output_registry["lon_min"].width == output_registry["lon_deg"].width
+
+
+def test_mgrs_fields_are_single_line_with_matching_width():
+    input_field = ui_builder.UIBuilder.create_coordinate_field("mgrs")
+    output_field = ui_builder.UIBuilder.create_coordinate_field("mgrs", read_only=True)
+
+    assert input_field.width == output_field.width
+    assert input_field.multiline is False
+    assert output_field.multiline is False

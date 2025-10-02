@@ -165,6 +165,7 @@ class UIBuilder:
         field = ft.TextField(
             label=calculated_label,  # MUST have label
             width=calculated_width,
+            multiline=False,
             autofocus=autofocus,
             read_only=read_only,
         )
