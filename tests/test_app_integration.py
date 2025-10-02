@@ -22,10 +22,11 @@ def test_app_initialization_with_map():
     # Verify map view was created
     assert app.map_view is not None, "Map view was not created"
     
-    # Verify map URL is an http://localhost URL using embedded server
+    # Verify map URL is provided as an inline base64 data URL
     map_url = app._map_url()
-    assert map_url.startswith("http://localhost:"), f"Map URL should start with http://localhost:, got: {map_url}"
-    assert "leaflet.html" in map_url, f"Map URL should contain leaflet.html, got: {map_url}"
+    assert map_url.startswith(
+        "data:text/html;base64,"
+    ), f"Map URL should be a base64 data URL, got: {map_url}"
     
     print(f"✓ App initialized successfully")
     print(f"  Map URL: {map_url}")
@@ -45,11 +46,9 @@ def test_map_view_properties():
     # Check that map view has expand property
     assert app.map_view.expand is True, "Map view should have expand=True"
     
-    # Check that map view URL is localhost (embedded server)
-    assert app.map_view.url.startswith("http://localhost:"), \
-        f"Map view URL should use localhost server, got: {app.map_view.url}"
-    assert "leaflet.html" in app.map_view.url, \
-        f"Map view URL should contain leaflet.html, got: {app.map_view.url}"
+    # Check that map view URL uses inline data URL
+    assert app.map_view.url.startswith("data:text/html;base64,"), \
+        f"Map view URL should be a base64 data URL, got: {app.map_view.url}"
     
     print(f"✓ Map view properties are correct")
 
