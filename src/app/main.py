@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -343,10 +344,8 @@ class CoordinateApp:
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
-        # Accuracy indicators (input rows only)
-        self.input_accuracy_text = ft.Text(
-            value="", size=11, color=ft.Colors.ON_SURFACE_VARIANT
-        )
+        # Accuracy indicators keyed per coordinate row/field
+        self.input_accuracy_indicators: Dict[str, ft.Text] = {}
 
         self.input_fields: Dict[str, ft.TextField] = {}
         self.input_fields_container = ft.Column(spacing=8)
@@ -517,6 +516,36 @@ class CoordinateApp:
         self.input_fields.clear()
         controls: List[ft.Control] = []
         self._suspend_input_events = True
+        self.input_accuracy_indicators = {}
+
+        def create_accuracy_indicator(row_key: str) -> ft.Container:
+            indicator = ft.Text(
+                value="",
+                size=11,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                visible=False,
+                text_align=ft.TextAlign.RIGHT,
+            )
+            container = ft.Container(
+                content=indicator,
+                width=240,
+                alignment=ft.alignment.center_right,
+            )
+            self.input_accuracy_indicators[row_key] = indicator
+            return container
+
+        def wrap_with_accuracy(row_key: str, control: ft.Control) -> ft.Row:
+            if isinstance(control, ft.Row):
+                control.expand = True
+            return ft.Row(
+                controls=[
+                    control,
+                    create_accuracy_indicator(row_key),
+                ],
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True,
+            )
 
         # Use UIBuilder for DD/DDM/DMS formats
         # UIBuilder callbacks receive event object only, not FieldSpec
@@ -530,7 +559,7 @@ class CoordinateApp:
 
         if option.source_format == "DD":
             # Create the fields first, then set up callbacks
-            controls = ui_builder.UIBuilder.build_dd_input_fields(
+            base_controls = ui_builder.UIBuilder.build_dd_input_fields(
                 self.input_fields,
                 lambda e: None,  # Placeholder, we'll override
                 self._on_input_blur,
@@ -544,8 +573,14 @@ class CoordinateApp:
             self.input_fields["lon_deg"].on_focus = make_on_focus("lon_deg", "Degrees")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
 
+            controls = []
+            lat_label, lat_row = base_controls[0], base_controls[1]
+            lon_label, lon_row = base_controls[2], base_controls[3]
+            controls.extend([lat_label, wrap_with_accuracy("lat", lat_row)])
+            controls.extend([lon_label, wrap_with_accuracy("lon", lon_row)])
+
         elif option.source_format == "DDM":
-            controls = ui_builder.UIBuilder.build_ddm_input_fields(
+            base_controls = ui_builder.UIBuilder.build_ddm_input_fields(
                 self.input_fields,
                 lambda e: None,
                 self._on_input_blur,
@@ -567,8 +602,14 @@ class CoordinateApp:
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
 
+            controls = []
+            lat_label, lat_row = base_controls[0], base_controls[1]
+            lon_label, lon_row = base_controls[2], base_controls[3]
+            controls.extend([lat_label, wrap_with_accuracy("lat", lat_row)])
+            controls.extend([lon_label, wrap_with_accuracy("lon", lon_row)])
+
         elif option.source_format == "DMS":
-            controls = ui_builder.UIBuilder.build_dms_input_fields(
+            base_controls = ui_builder.UIBuilder.build_dms_input_fields(
                 self.input_fields,
                 lambda e: None,
                 self._on_input_blur,
@@ -593,6 +634,12 @@ class CoordinateApp:
             self.input_fields["lon_min"].on_focus = make_on_focus("lon_min", "Minutes")
             self.input_fields["lon_sec"].on_focus = make_on_focus("lon_sec", "Seconds")
             self.input_fields["lon_dir"].on_focus = make_on_focus("lon_dir", "E/W")
+
+            controls = []
+            lat_label, lat_row = base_controls[0], base_controls[1]
+            lon_label, lon_row = base_controls[2], base_controls[3]
+            controls.extend([lat_label, wrap_with_accuracy("lat", lat_row)])
+            controls.extend([lon_label, wrap_with_accuracy("lon", lon_row)])
         else:
             # Legacy formats (RT90, XYZ, MGRS, etc.)
             self.input_tab_order = []
@@ -623,7 +670,10 @@ class CoordinateApp:
                     )
                 self.input_fields[spec.name] = field
                 self.input_tab_order.append(spec.name)
-                controls.append(field)
+                if option.source_format in {"RT90", "XYZ", "RR92_XYZ", "MGRS"}:
+                    controls.append(wrap_with_accuracy(spec.name, field))
+                else:
+                    controls.append(field)
 
         self.input_height_row.controls = [self.input_height_selector]
         if option.separate_height:
@@ -640,11 +690,15 @@ class CoordinateApp:
         else:
             self.input_height_field = None
             self.input_height_row.visible = False
+
+        self._clear_accuracy_indicator()
+
         self._suspend_input_events = False
         self.input_fields_container.controls = controls
         self.focused_field = None
         self.focused_field_spec = None
         self._populate_input_from_results(option)
+        self._update_input_accuracy()
         self.page.update()
 
     def _populate_input_from_results(self, option: CoordinateOption) -> None:
@@ -762,6 +816,275 @@ class CoordinateApp:
                     self.input_height_field.value = f"{float(height_values[0]):.3f}"
         finally:
             self._suspend_input_events = False
+
+    ACCURACY_TARGET_METERS = 0.025
+
+    def _clear_accuracy_indicator(self) -> None:
+        for indicator in self.input_accuracy_indicators.values():
+            indicator.value = ""
+            indicator.visible = False
+
+    def _update_input_accuracy(self) -> None:
+        option = COORDINATE_OPTIONS[self.input_coord_selector.value]
+        self._clear_accuracy_indicator()
+
+        if option.source_format in {"DD", "DDM", "DMS"}:
+            lat_accuracy, lon_accuracy = self._calculate_angular_accuracy(
+                option.source_format
+            )
+            if lat_accuracy is None or lon_accuracy is None:
+                return
+            self._set_accuracy_indicator("lat", lat_accuracy)
+            self._set_accuracy_indicator("lon", lon_accuracy)
+            return
+
+        if option.source_format == "RT90":
+            self._set_accuracy_indicator(
+                "easting", self._metric_accuracy_for_field("easting")
+            )
+            self._set_accuracy_indicator(
+                "northing", self._metric_accuracy_for_field("northing")
+            )
+            return
+
+        if option.source_format in {"XYZ", "RR92_XYZ"}:
+            for axis in ("x", "y", "z"):
+                self._set_accuracy_indicator(axis, self._metric_accuracy_for_field(axis))
+            return
+
+        if option.source_format == "MGRS":
+            self._set_accuracy_indicator("mgrs", self._mgrs_accuracy())
+            return
+
+    def _calculate_angular_accuracy(
+        self, format_mode: str
+    ) -> Tuple[Optional[float], Optional[float]]:
+        lat_resolution = self._resolution_for_angle("lat", format_mode)
+        lon_resolution = self._resolution_for_angle("lon", format_mode)
+        if lat_resolution is None or lon_resolution is None:
+            return None, None
+
+        lat_value, _ = self._current_latlon_values(format_mode)
+        lat_for_scale = abs(lat_value) if lat_value is not None else 60.0
+
+        lat_accuracy = lat_resolution * self._meters_per_degree_lat(lat_for_scale)
+        lon_accuracy = lon_resolution * abs(self._meters_per_degree_lon(lat_for_scale))
+        return lat_accuracy, lon_accuracy
+
+    def _resolution_for_angle(
+        self, prefix: str, format_mode: str
+    ) -> Optional[float]:
+        if format_mode == "DD":
+            field = self.input_fields.get(f"{prefix}_deg")
+            if field is None:
+                return None
+            value = field.value.strip()
+            if not value:
+                return None
+            return self._component_resolution(value, 1.0)
+
+        if format_mode == "DDM":
+            deg_field = self.input_fields.get(f"{prefix}_deg")
+            min_field = self.input_fields.get(f"{prefix}_min")
+            if deg_field is None or min_field is None:
+                return None
+            deg_value = deg_field.value.strip()
+            min_value = min_field.value.strip()
+            if not deg_value or not min_value:
+                return None
+            resolutions = [
+                self._component_resolution(deg_value, 1.0),
+                self._component_resolution(min_value, 60.0),
+            ]
+            filtered = [res for res in resolutions if res is not None]
+            if not filtered:
+                return None
+            return min(filtered)
+
+        if format_mode == "DMS":
+            deg_field = self.input_fields.get(f"{prefix}_deg")
+            min_field = self.input_fields.get(f"{prefix}_min")
+            sec_field = self.input_fields.get(f"{prefix}_sec")
+            if deg_field is None or min_field is None or sec_field is None:
+                return None
+            deg_value = deg_field.value.strip()
+            min_value = min_field.value.strip()
+            sec_value = sec_field.value.strip()
+            if not deg_value or not min_value or not sec_value:
+                return None
+            resolutions = [
+                self._component_resolution(deg_value, 1.0),
+                self._component_resolution(min_value, 60.0),
+                self._component_resolution(sec_value, 3600.0),
+            ]
+            filtered = [res for res in resolutions if res is not None]
+            if not filtered:
+                return None
+            return min(filtered)
+
+        return None
+
+    def _component_resolution(self, value: str, divisor: float) -> Optional[float]:
+        value = value.strip()
+        if not value:
+            return None
+        decimals = self._decimal_places(value)
+        step = 10 ** (-decimals) if decimals > 0 else 1.0
+        return 0.5 * step / divisor
+
+    def _metric_accuracy_for_field(self, field_name: str) -> Optional[float]:
+        field = self.input_fields.get(field_name)
+        if field is None or not field.value:
+            return None
+        return self._component_resolution(field.value, 1.0)
+
+    def _mgrs_accuracy(self) -> Optional[float]:
+        field = self.input_fields.get("mgrs")
+        if field is None or not field.value:
+            return None
+        compact = field.value.upper().replace(" ", "")
+        if not compact:
+            return None
+
+        index = 0
+        while index < len(compact) and compact[index].isdigit():
+            index += 1
+        if index >= len(compact):
+            return None
+
+        # Skip latitude band letter
+        index += 1
+        if index + 2 > len(compact):
+            return None
+        # Skip 100 km grid letters
+        index += 2
+        digits = compact[index:]
+        if len(digits) % 2 != 0:
+            return None
+
+        digits_per_axis = len(digits) // 2
+        if digits_per_axis > 5:
+            return None
+        grid_size = 10 ** (5 - digits_per_axis)
+        return 0.5 * grid_size
+
+    def _current_latlon_values(
+        self, format_mode: str
+    ) -> Tuple[Optional[float], Optional[float]]:
+        def get_value(name: str) -> Optional[str]:
+            field = self.input_fields.get(name)
+            if field is None or field.value is None:
+                return None
+            stripped = field.value.strip()
+            return stripped or None
+
+        lat_dir = (get_value("lat_dir") or "N").upper()
+        lon_dir = (get_value("lon_dir") or "E").upper()
+        lat_dir = lat_dir if lat_dir in {"N", "S"} else "N"
+        lon_dir = lon_dir if lon_dir in {"E", "W"} else "E"
+
+        try:
+            if format_mode == "DD":
+                lat_deg = get_value("lat_deg")
+                lon_deg = get_value("lon_deg")
+                if lat_deg is None or lon_deg is None:
+                    return None, None
+                lat = float(lat_deg.replace(",", "."))
+                lon = float(lon_deg.replace(",", "."))
+            elif format_mode == "DDM":
+                lat_deg = get_value("lat_deg")
+                lat_min = get_value("lat_min")
+                lon_deg = get_value("lon_deg")
+                lon_min = get_value("lon_min")
+                if None in {lat_deg, lat_min, lon_deg, lon_min}:
+                    return None, None
+                lat = abs(float(lat_deg.replace(",", ".")))
+                lat += abs(float(lat_min.replace(",", "."))) / 60.0
+                lon = abs(float(lon_deg.replace(",", ".")))
+                lon += abs(float(lon_min.replace(",", "."))) / 60.0
+            elif format_mode == "DMS":
+                lat_deg = get_value("lat_deg")
+                lat_min = get_value("lat_min")
+                lat_sec = get_value("lat_sec")
+                lon_deg = get_value("lon_deg")
+                lon_min = get_value("lon_min")
+                lon_sec = get_value("lon_sec")
+                if None in {
+                    lat_deg,
+                    lat_min,
+                    lat_sec,
+                    lon_deg,
+                    lon_min,
+                    lon_sec,
+                }:
+                    return None, None
+                lat = abs(float(lat_deg.replace(",", ".")))
+                lat += abs(float(lat_min.replace(",", "."))) / 60.0
+                lat += abs(float(lat_sec.replace(",", "."))) / 3600.0
+                lon = abs(float(lon_deg.replace(",", ".")))
+                lon += abs(float(lon_min.replace(",", "."))) / 60.0
+                lon += abs(float(lon_sec.replace(",", "."))) / 3600.0
+            else:
+                return None, None
+        except ValueError:
+            return None, None
+
+        lat = -lat if lat_dir == "S" else lat
+        lon = -lon if lon_dir == "W" else lon
+        return lat, lon
+
+    @staticmethod
+    def _decimal_places(value: str) -> int:
+        cleaned = value.strip().replace(" ", "")
+        if not cleaned:
+            return 0
+        if cleaned[0] in "+-":
+            cleaned = cleaned[1:]
+        for sep in (".", ","):
+            if sep in cleaned:
+                return len(cleaned.split(sep, 1)[1])
+        return 0
+
+    def _set_accuracy_indicator(
+        self, key: str, meters: Optional[float]
+    ) -> None:
+        indicator = self.input_accuracy_indicators.get(key)
+        if indicator is None or meters is None:
+            return
+        indicator.value = (
+            f"Target ±{self.ACCURACY_TARGET_METERS:.3f} m • Current ≈ {self._format_accuracy_value(meters)}"
+        )
+        indicator.visible = True
+
+    @staticmethod
+    def _meters_per_degree_lat(lat_deg: float) -> float:
+        lat_rad = math.radians(lat_deg)
+        return (
+            111_132.92
+            - 559.82 * math.cos(2 * lat_rad)
+            + 1.175 * math.cos(4 * lat_rad)
+            - 0.0023 * math.cos(6 * lat_rad)
+        )
+
+    @staticmethod
+    def _meters_per_degree_lon(lat_deg: float) -> float:
+        lat_rad = math.radians(lat_deg)
+        return (
+            111_412.84 * math.cos(lat_rad)
+            - 93.5 * math.cos(3 * lat_rad)
+            + 0.118 * math.cos(5 * lat_rad)
+        )
+
+    @staticmethod
+    def _format_accuracy_value(meters: float) -> str:
+        magnitude = abs(meters)
+        if magnitude >= 1000:
+            return f"±{magnitude / 1000:.2f} km"
+        if magnitude >= 1:
+            return f"±{magnitude:.2f} m"
+        if magnitude >= 0.01:
+            return f"±{magnitude * 100:.1f} cm"
+        return f"±{magnitude * 1000:.1f} mm"
 
     def _rebuild_output_fields(self) -> None:
         option = COORDINATE_OPTIONS[self.output_coord_selector.value]
@@ -1003,6 +1326,7 @@ class CoordinateApp:
             self.status_text.value = f"Input error: {exc}"
             self.warning_text.value = ""
             self.formatted_text.value = ""
+            self._clear_accuracy_indicator()
             self.page.update()
             return
         self._run_conversion(parsed)
@@ -1186,6 +1510,7 @@ class CoordinateApp:
         if height_summary:
             formatted_parts.append(height_summary)
         self.formatted_text.value = " | ".join(part for part in formatted_parts if part)
+        self._update_input_accuracy()
         self._update_map(lat, lon)
         self.page.update()
 
