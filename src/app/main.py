@@ -950,13 +950,13 @@ class CoordinateApp:
     def _make_copy_button(
         self, tooltip: str, handler: Callable[[ft.ControlEvent], None]
     ) -> ft.Control:
-        button = ft.IconButton(
+        return ft.IconButton(
             icon=ft.Icons.CONTENT_COPY,
             icon_size=18,
+            tooltip=tooltip,
             on_click=handler,
             style=ft.ButtonStyle(padding=ft.padding.all(6)),
         )
-        return ft.Container(content=button, tooltip=tooltip)
 
     @staticmethod
     def _compact_value(text: str | None) -> str:
