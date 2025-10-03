@@ -29,9 +29,9 @@ def test_ddm_copy_uses_standardised_format():
     lat_formatted = app._format_output_angle("DDM", "lat")
     lon_formatted = app._format_output_angle("DDM", "lon")
 
-    assert lat_formatted == "+5930.1234"
-    assert lon_formatted == "+01845.6789"
-    assert app._collect_selected_output_values() == "+5930.1234,+01845.6789"
+    assert lat_formatted == "59°30.1234′N"
+    assert lon_formatted == "18°45.6789′E"
+    assert app._collect_selected_output_values() == "59°30.1234′N 18°45.6789′E"
 
 
 def test_dms_copy_uses_standardised_format():
@@ -51,9 +51,9 @@ def test_dms_copy_uses_standardised_format():
     lat_formatted = app._format_output_angle("DMS", "lat")
     lon_formatted = app._format_output_angle("DMS", "lon")
 
-    assert lat_formatted == "+593015.20"
-    assert lon_formatted == "+0184505.10"
-    assert app._collect_selected_output_values() == "+593015.20,+0184505.10"
+    assert lat_formatted == "59°30′15.20″N"
+    assert lon_formatted == "18°45′05.10″E"
+    assert app._collect_selected_output_values() == "59°30′15.20″N 18°45′05.10″E"
 
 
 def test_ddm_copy_uses_direction_for_sign():
@@ -68,8 +68,8 @@ def test_ddm_copy_uses_direction_for_sign():
     app.output_fields["lon_deg"].value = "18"
     app.output_fields["lon_min"].value = "45.6789"
 
-    assert app._format_output_angle("DDM", "lat") == "-5930.1234"
-    assert app._format_output_angle("DDM", "lon") == "-01845.6789"
+    assert app._format_output_angle("DDM", "lat") == "59°30.1234′S"
+    assert app._format_output_angle("DDM", "lon") == "18°45.6789′W"
 
 
 def test_dms_copy_uses_direction_for_sign():
@@ -86,5 +86,5 @@ def test_dms_copy_uses_direction_for_sign():
     app.output_fields["lon_min"].value = "45"
     app.output_fields["lon_sec"].value = "5.1"
 
-    assert app._format_output_angle("DMS", "lat") == "-593015.20"
-    assert app._format_output_angle("DMS", "lon") == "-0184505.10"
+    assert app._format_output_angle("DMS", "lat") == "59°30′15.20″S"
+    assert app._format_output_angle("DMS", "lon") == "18°45′05.10″W"

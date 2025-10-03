@@ -82,11 +82,15 @@ The Coordinate Converter application provides accurate transformations between S
 - Hover/focus states use a lighter accent shade.
 
 ### Clipboard Formatting
-- Copy buttons must emit ASCII-only coordinate strings that follow the ISO 6709 human interface recommendations.
-  - Decimal degrees outputs use signed decimal tuples: `±DD.dddddd,±DDD.dddddd`.
-  - Degrees–decimal minutes outputs use signed compact minute strings: `±DDMM.mmmm,±DDDMM.mmmm`.
-  - Degrees–minutes–seconds outputs use signed compact second strings: `±DDMMSS.ss,±DDDMMSS.ss`.
-- Height values include their unit suffix (`m`) in the UI while keeping the copied value numeric.
+- Copy buttons must emit ASCII-only coordinate strings that follow the ISO 6709 human interface recommendations for human-readable data.
+- Representation at the human interface (Annex D):
+  - Coordinate values (latitude, longitude, altitude) are delimited by single spaces.
+  - Latitude and longitude are expressed with sexagesimal fractions using degree (°), minute (′), and second (″) symbols without spaces between the numeric value and symbol.
+  - Minutes and seconds include leading zeroes when they are less than ten.
+  - Hemisphere indicators (`N`, `S`, `E`, `W`) follow immediately after the coordinate digits.
+  - Height copies include the unit symbol directly after the value (e.g., `20m`).
+  - Negative elevations use a leading minus sign when copied.
+- The clipboard text must be sanitised to ASCII while preserving the structure above (`°` → `deg`, `′` → `'`, `″` → `"`).
 
 ### Tab Navigation
 - All interactive fields must support **keyboard navigation** with **Tab**.  

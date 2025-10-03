@@ -909,14 +909,10 @@ class CoordinateApp:
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
-            return (
-                f"{self._deg_to_ddm(lat, 'N', 'S')} / {self._deg_to_ddm(lon, 'E', 'W')}"
-            )
+            return f"{self._deg_to_ddm(lat, 'N', 'S')} {self._deg_to_ddm(lon, 'E', 'W')}"
         if fmt == "DMS":
-            return (
-                f"{self._deg_to_dms(lat, 'N', 'S')} / {self._deg_to_dms(lon, 'E', 'W')}"
-            )
-        return f"{lat:.6f}, {lon:.6f}"
+            return f"{self._deg_to_dms(lat, 'N', 'S')} {self._deg_to_dms(lon, 'E', 'W')}"
+        return f"{lat:.6f} {lon:.6f}"
 
     def _height_summary(self) -> str:
         if "HEIGHT_ERROR" in self.current_results:
@@ -941,7 +937,7 @@ class CoordinateApp:
         else:
             height_values = self.current_results.get("HEIGHT")
             if isinstance(height_values, (tuple, list)) and height_values:
-                self.output_height_field.value = f"{float(height_values[0]):.3f}"
+                self.output_height_field.value = f"{float(height_values[0]):.3f} m"
                 if "HEIGHT_INFO" in self.current_results:
                     separation = float(self.current_results["HEIGHT_INFO"][0])
                     helper = f"Geoid separation: {separation:.3f} m"
@@ -1017,8 +1013,8 @@ class CoordinateApp:
     @staticmethod
     def _sanitize_ascii(text: str) -> str:
         replacements = {
-            "°": " deg",
-            "º": " deg",
+            "°": "deg",
+            "º": "deg",
             "′": "'",
             "’": "'",
             "″": '"',
@@ -1046,7 +1042,7 @@ class CoordinateApp:
                 values.append(lat_value)
             if lon_value:
                 values.append(lon_value)
-            return ",".join(values)
+            return " ".join(values)
         values: List[str] = []
         for spec in option.fields:
             field = self.output_fields.get(spec.name)
@@ -1066,7 +1062,10 @@ class CoordinateApp:
         abs_val = abs(value)
         degrees = int(abs_val)
         minutes = (abs_val - degrees) * 60
-        return f"{degrees}° {minutes:.4f}' {sign}"
+        minutes_text = f"{minutes:.4f}"
+        if minutes < 10:
+            minutes_text = f"0{minutes_text}"
+        return f"{degrees}°{minutes_text}′{sign}"
 
     @staticmethod
     def _deg_to_dms(value: float, positive: str, negative: str) -> str:
@@ -1076,7 +1075,10 @@ class CoordinateApp:
         minutes_full = (abs_val - degrees) * 60
         minutes = int(minutes_full)
         seconds = (minutes_full - minutes) * 60
-        return f"{degrees}° {minutes}' {seconds:.2f}\" {sign}"
+        seconds_text = f"{seconds:.2f}"
+        if seconds < 10:
+            seconds_text = f"0{seconds_text}"
+        return f"{degrees}°{minutes:02d}′{seconds_text}″{sign}"
 
     def _format_output_angle(self, fmt: str, axis: str) -> str:
         axis_key = "lat" if axis.startswith("lat") else "lon"
@@ -1100,11 +1102,12 @@ class CoordinateApp:
             minutes_value = abs(float(min_field.value or "0"))
         except (TypeError, ValueError):
             return ""
-        degree_width = 3 if axis == "lon" else 2
-        degrees_text = f"{degrees_value:0{degree_width}d}"
-        minutes_text = f"{minutes_value:05.4f}".rjust(7, "0")
-        sign = self._angle_sign(axis, direction, degrees_raw)
-        return f"{sign}{degrees_text}{minutes_text}"
+        minutes_text = f"{minutes_value:.4f}"
+        if minutes_value < 10:
+            minutes_text = f"0{minutes_text}"
+        degrees_text = f"{degrees_value}"
+        direction_suffix = self._angle_direction(axis, direction, degrees_raw)
+        return f"{degrees_text}°{minutes_text}′{direction_suffix}"
 
     def _format_dms_angle(self, axis: str, direction: str) -> str:
         deg_field = self.output_fields.get(f"{axis}_deg")
@@ -1123,27 +1126,25 @@ class CoordinateApp:
             seconds_value = abs(float(sec_field.value or "0"))
         except (TypeError, ValueError):
             return ""
-        degree_width = 3 if axis == "lon" else 2
-        degrees_text = f"{degrees_value:0{degree_width}d}"
+        degrees_text = f"{degrees_value}"
         minutes_text = f"{minutes_value:02d}"
-        seconds_text = f"{seconds_value:05.2f}"
-        sign = self._angle_sign(axis, direction, degrees_raw)
-        return f"{sign}{degrees_text}{minutes_text}{seconds_text}"
+        seconds_text = f"{seconds_value:.2f}"
+        if seconds_value < 10:
+            seconds_text = f"0{seconds_text}"
+        direction_suffix = self._angle_direction(axis, direction, degrees_raw)
+        return f"{degrees_text}°{minutes_text}′{seconds_text}″{direction_suffix}"
 
     @staticmethod
-    def _angle_sign(axis: str, direction: str, degrees_raw: float) -> str:
+    def _angle_direction(axis: str, direction: str, degrees_raw: float) -> str:
         direction = (direction or "").upper()
         if axis == "lat":
-            if direction == "S":
-                return "-"
-            if direction == "N":
-                return "+"
+            if direction in {"N", "S"}:
+                return direction
+            return "S" if degrees_raw < 0 else "N"
         else:
-            if direction == "W":
-                return "-"
-            if direction == "E":
-                return "+"
-        return "-" if degrees_raw < 0 else "+"
+            if direction in {"E", "W"}:
+                return direction
+            return "W" if degrees_raw < 0 else "E"
 
     def _on_input_type_change(self, _event) -> None:
         self._rebuild_input_fields()
