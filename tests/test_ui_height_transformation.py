@@ -327,8 +327,10 @@ class TestHeightTransformationUI:
         assert self.app.output_height_field.value is not None
         assert self.app.output_height_field.value != ""
         
-        # Value should be parseable as float
-        output_value = float(self.app.output_height_field.value)
+        # Value should end with unit and be parseable when stripped
+        output_value_text = self.app.output_height_field.value
+        assert output_value_text.endswith(" m")
+        output_value = float(output_value_text.replace(" m", ""))
         assert abs(output_value - 50.0) < 0.01
         
         print(f"✓ Height displayed in output field: {self.app.output_height_field.value}")

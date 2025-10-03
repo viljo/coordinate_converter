@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import flet as ft
 
@@ -334,15 +334,35 @@ class CoordinateApp:
             helper_text="",
             width=ui_builder.UIBuilder.coordinate_width("height"),
             text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
+            suffix_text="m",
+        )
+        self.output_height_copy_button = self._make_copy_button(
+            "Copy height",
+            self._copy_height_value,
         )
         self.output_height_row = ft.Row(
-            controls=[self.output_height_selector, self.output_height_field],
+            controls=[
+                self.output_height_selector,
+                self.output_height_field,
+                self.output_height_copy_button,
+            ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.status_text = ft.Text(value="Ready", color=ft.Colors.ON_SURFACE_VARIANT)
         self.warning_text = ft.Text(value="", color=ft.Colors.AMBER)
         self.formatted_text = ft.Text(value="", color=ft.Colors.PRIMARY)
+        self._formatted_coordinate_value: str = ""
+        self.formatted_text_copy_button = self._make_copy_button(
+            "Copy coordinate",
+            self._copy_formatted_text,
+        )
+        self.formatted_text_row = ft.Row(
+            controls=[self.formatted_text, self.formatted_text_copy_button],
+            spacing=4,
+            alignment=ft.MainAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
         # Accuracy indicators (input rows only)
         self.input_accuracy_text = ft.Text(
             value="", size=11, color=ft.Colors.ON_SURFACE_VARIANT
@@ -478,7 +498,7 @@ class CoordinateApp:
                 ft.Divider(),
                 self.status_text,
                 self.warning_text,
-                self.formatted_text,
+                self.formatted_text_row,
             ],
             expand=True,
         )
@@ -1038,7 +1058,48 @@ class CoordinateApp:
                 self.output_fields[spec.name] = field
                 controls.append(field)
 
-        self.output_fields_container.controls = controls
+        enhanced_controls: List[ft.Control] = []
+        i = 0
+        while i < len(controls):
+            control = controls[i]
+            if (
+                isinstance(control, ft.Text)
+                and i + 1 < len(controls)
+                and isinstance(controls[i + 1], ft.Row)
+            ):
+                label_control = control
+                row_control = controls[i + 1]
+                row_control.vertical_alignment = ft.CrossAxisAlignment.CENTER
+                tooltip_label = label_control.value.rstrip(":") or "Coordinate"
+                copy_button = self._make_copy_button(
+                    f"Copy {tooltip_label}",
+                    lambda _e, lbl=label_control.value, row=row_control: self._copy_output_row(
+                        lbl, row
+                    ),
+                )
+                row_control.controls.append(copy_button)
+                enhanced_controls.append(label_control)
+                enhanced_controls.append(row_control)
+                i += 2
+                continue
+            if isinstance(control, ft.TextField):
+                copy_button = self._make_copy_button(
+                    f"Copy {control.label or 'value'}",
+                    lambda _e, field=control: self._copy_single_field(field),
+                )
+                enhanced_controls.append(
+                    ft.Row(
+                        controls=[control, copy_button],
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        alignment=ft.MainAxisAlignment.START,
+                    )
+                )
+            else:
+                enhanced_controls.append(control)
+            i += 1
+
+        self.output_fields_container.controls = enhanced_controls
         self.output_height_row.visible = option.separate_height
         self._update_output_height_display()
         self.page.update()
@@ -1100,14 +1161,10 @@ class CoordinateApp:
 
     def _format_latlon(self, lat: float, lon: float, fmt: str) -> str:
         if fmt == "DDM":
-            return (
-                f"{self._deg_to_ddm(lat, 'N', 'S')} / {self._deg_to_ddm(lon, 'E', 'W')}"
-            )
+            return f"{self._deg_to_ddm(lat, 'N', 'S')} {self._deg_to_ddm(lon, 'E', 'W')}"
         if fmt == "DMS":
-            return (
-                f"{self._deg_to_dms(lat, 'N', 'S')} / {self._deg_to_dms(lon, 'E', 'W')}"
-            )
-        return f"{lat:.6f}, {lon:.6f}"
+            return f"{self._deg_to_dms(lat, 'N', 'S')} {self._deg_to_dms(lon, 'E', 'W')}"
+        return f"{lat:.6f} {lon:.6f}"
 
     def _height_summary(self) -> str:
         if "HEIGHT_ERROR" in self.current_results:
@@ -1132,7 +1189,7 @@ class CoordinateApp:
         else:
             height_values = self.current_results.get("HEIGHT")
             if isinstance(height_values, (tuple, list)) and height_values:
-                self.output_height_field.value = f"{float(height_values[0]):.3f}"
+                self.output_height_field.value = f"{float(height_values[0]):.3f} m"
                 if "HEIGHT_INFO" in self.current_results:
                     separation = float(self.current_results["HEIGHT_INFO"][0])
                     helper = f"Geoid separation: {separation:.3f} m"
@@ -1142,13 +1199,125 @@ class CoordinateApp:
         if self.output_height_field.page is not None:
             self.output_height_field.update()
 
+    def _make_copy_button(
+        self, tooltip: str, handler: Callable[[ft.ControlEvent], None]
+    ) -> ft.Control:
+        return ft.IconButton(
+            icon=ft.Icons.CONTENT_COPY,
+            icon_size=18,
+            tooltip=tooltip,
+            on_click=handler,
+            style=ft.ButtonStyle(padding=ft.padding.all(6)),
+        )
+
+    @staticmethod
+    def _compact_value(text: str | None) -> str:
+        return "".join((text or "").split())
+
+    def _copy_single_field(self, field: ft.TextField) -> None:
+        text = self._compact_value(field.value)
+        self._copy_text(text)
+
+    def _copy_output_row(self, label_text: str, row: ft.Row) -> None:
+        option = COORDINATE_OPTIONS.get(self.output_coord_selector.value)
+        if option and option.source_format in {"DDM", "DMS"}:
+            axis = "lat" if label_text.lower().startswith("lat") else "lon"
+            formatted = self._format_output_angle(option.source_format, axis)
+            if formatted:
+                self._copy_text(formatted)
+                return
+        values: List[str] = []
+        for ctrl in row.controls:
+            if isinstance(ctrl, ft.TextField):
+                value = self._compact_value(ctrl.value)
+                if value:
+                    values.append(value)
+        text = "".join(values)
+        self._copy_text(text)
+
+    def _copy_height_value(self, _event) -> None:
+        text = self._compact_value(self.output_height_field.value)
+        self._copy_text(text)
+
+    def _copy_formatted_text(self, _event) -> None:
+        formatted_display = (self.formatted_text.value or "").split(" | ")[0]
+        coordinate_text = self._formatted_coordinate_value.strip()
+        if not coordinate_text:
+            coordinate_text = self._collect_selected_output_values()
+        if not coordinate_text:
+            coordinate_text = formatted_display.strip()
+        self._copy_text(coordinate_text)
+
+    def _copy_text(self, text: str) -> None:
+        ascii_text = self._sanitize_ascii(text)
+        setter = getattr(self.page, "set_clipboard", None)
+        if callable(setter) and ascii_text:
+            try:
+                setter(ascii_text)
+            except Exception:
+                pass
+        self.status_text.value = (
+            f"Copied to clipboard: {ascii_text}" if ascii_text else "Nothing to copy"
+        )
+        if self.status_text.page is not None:
+            self.status_text.update()
+
+    @staticmethod
+    def _sanitize_ascii(text: str) -> str:
+        replacements = {
+            "°": "deg",
+            "º": "deg",
+            "′": "'",
+            "’": "'",
+            "″": '"',
+            "“": '"',
+            "”": '"',
+        }
+        cleaned = text or ""
+        for src, dst in replacements.items():
+            cleaned = cleaned.replace(src, dst)
+        try:
+            ascii_text = cleaned.encode("ascii", "ignore").decode("ascii")
+        except Exception:
+            ascii_text = cleaned
+        return " ".join(ascii_text.strip().split())
+
+    def _collect_selected_output_values(self) -> str:
+        option = COORDINATE_OPTIONS.get(self.output_coord_selector.value)
+        if not option:
+            return ""
+        if option.source_format in {"DDM", "DMS"}:
+            values: List[str] = []
+            lat_value = self._format_output_angle(option.source_format, "lat")
+            lon_value = self._format_output_angle(option.source_format, "lon")
+            if lat_value:
+                values.append(lat_value)
+            if lon_value:
+                values.append(lon_value)
+            return " ".join(values)
+        values: List[str] = []
+        for spec in option.fields:
+            field = self.output_fields.get(spec.name)
+            if isinstance(field, ft.TextField):
+                value = self._compact_value(field.value)
+                if value:
+                    values.append(value)
+        if not values:
+            return ""
+        if len(values) == 1:
+            return values[0]
+        return ",".join(values)
+
     @staticmethod
     def _deg_to_ddm(value: float, positive: str, negative: str) -> str:
         sign = positive if value >= 0 else negative
         abs_val = abs(value)
         degrees = int(abs_val)
         minutes = (abs_val - degrees) * 60
-        return f"{degrees}° {minutes:.4f}' {sign}"
+        minutes_text = f"{minutes:.4f}"
+        if minutes < 10:
+            minutes_text = f"0{minutes_text}"
+        return f"{degrees}°{minutes_text}′{sign}"
 
     @staticmethod
     def _deg_to_dms(value: float, positive: str, negative: str) -> str:
@@ -1158,7 +1327,76 @@ class CoordinateApp:
         minutes_full = (abs_val - degrees) * 60
         minutes = int(minutes_full)
         seconds = (minutes_full - minutes) * 60
-        return f"{degrees}° {minutes}' {seconds:.2f}\" {sign}"
+        seconds_text = f"{seconds:.2f}"
+        if seconds < 10:
+            seconds_text = f"0{seconds_text}"
+        return f"{degrees}°{minutes:02d}′{seconds_text}″{sign}"
+
+    def _format_output_angle(self, fmt: str, axis: str) -> str:
+        axis_key = "lat" if axis.startswith("lat") else "lon"
+        direction_field = self.output_fields.get(f"{axis_key}_dir")
+        direction = self._compact_value(direction_field.value) if isinstance(direction_field, ft.TextField) else ""
+        direction = direction.upper()
+        if fmt == "DDM":
+            return self._format_ddm_angle(axis_key, direction)
+        if fmt == "DMS":
+            return self._format_dms_angle(axis_key, direction)
+        return ""
+
+    def _format_ddm_angle(self, axis: str, direction: str) -> str:
+        deg_field = self.output_fields.get(f"{axis}_deg")
+        min_field = self.output_fields.get(f"{axis}_min")
+        if not isinstance(deg_field, ft.TextField) or not isinstance(min_field, ft.TextField):
+            return ""
+        try:
+            degrees_raw = float(deg_field.value or "0")
+            degrees_value = abs(int(degrees_raw))
+            minutes_value = abs(float(min_field.value or "0"))
+        except (TypeError, ValueError):
+            return ""
+        minutes_text = f"{minutes_value:.4f}"
+        if minutes_value < 10:
+            minutes_text = f"0{minutes_text}"
+        degrees_text = f"{degrees_value}"
+        direction_suffix = self._angle_direction(axis, direction, degrees_raw)
+        return f"{degrees_text}°{minutes_text}′{direction_suffix}"
+
+    def _format_dms_angle(self, axis: str, direction: str) -> str:
+        deg_field = self.output_fields.get(f"{axis}_deg")
+        min_field = self.output_fields.get(f"{axis}_min")
+        sec_field = self.output_fields.get(f"{axis}_sec")
+        if (
+            not isinstance(deg_field, ft.TextField)
+            or not isinstance(min_field, ft.TextField)
+            or not isinstance(sec_field, ft.TextField)
+        ):
+            return ""
+        try:
+            degrees_raw = float(deg_field.value or "0")
+            degrees_value = abs(int(degrees_raw))
+            minutes_value = abs(int(float(min_field.value or "0")))
+            seconds_value = abs(float(sec_field.value or "0"))
+        except (TypeError, ValueError):
+            return ""
+        degrees_text = f"{degrees_value}"
+        minutes_text = f"{minutes_value:02d}"
+        seconds_text = f"{seconds_value:.2f}"
+        if seconds_value < 10:
+            seconds_text = f"0{seconds_text}"
+        direction_suffix = self._angle_direction(axis, direction, degrees_raw)
+        return f"{degrees_text}°{minutes_text}′{seconds_text}″{direction_suffix}"
+
+    @staticmethod
+    def _angle_direction(axis: str, direction: str, degrees_raw: float) -> str:
+        direction = (direction or "").upper()
+        if axis == "lat":
+            if direction in {"N", "S"}:
+                return direction
+            return "S" if degrees_raw < 0 else "N"
+        else:
+            if direction in {"E", "W"}:
+                return direction
+            return "W" if degrees_raw < 0 else "E"
 
     def _on_input_type_change(self, _event) -> None:
         self._rebuild_input_fields()
@@ -1259,6 +1497,7 @@ class CoordinateApp:
             self.status_text.value = f"Input error: {exc}"
             self.warning_text.value = ""
             self.formatted_text.value = ""
+            self._formatted_coordinate_value = ""
             self.page.update()
             return
         self._run_conversion(parsed)
@@ -1411,9 +1650,11 @@ class CoordinateApp:
             self.status_text.value = f"Transform error: {exc}"
             self.warning_text.value = ""
             self.formatted_text.value = ""
+            self._formatted_coordinate_value = ""
             self.page.update()
             return
         self.current_results = results
+        self._formatted_coordinate_value = ""
 
         self._update_output_fields()
         self._update_output_height_display()
@@ -1435,9 +1676,13 @@ class CoordinateApp:
             lat_val = float(display_values[0])
             lon_val = float(display_values[1])
             format_mode = selected_option.fields[0].format_mode or "DD"
-            formatted_parts.append(self._format_latlon(lat_val, lon_val, format_mode))
+            self._formatted_coordinate_value = self._format_latlon(
+                lat_val, lon_val, format_mode
+            )
+            formatted_parts.append(self._formatted_coordinate_value)
         elif selected_output == "MGRS" and "MGRS" in results:
-            formatted_parts.append(str(results["MGRS"]))
+            self._formatted_coordinate_value = str(results["MGRS"])
+            formatted_parts.append(self._formatted_coordinate_value)
         height_summary = self._height_summary()
         if height_summary:
             formatted_parts.append(height_summary)

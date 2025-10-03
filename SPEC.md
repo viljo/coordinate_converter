@@ -77,9 +77,22 @@ The Coordinate Converter application provides accurate transformations between S
 - Typography consistent across all cards.
 
 ### Buttons & Actions
-- Primary actions (e.g. "Copy", "Convert") styled in **accent color** (blue tone, `#1976d2`).  
-- Buttons have consistent corner radius (8px) and padding.  
+- Primary actions (e.g. "Copy", "Convert") styled in **accent color** (blue tone, `#1976d2`).
+- Buttons have consistent corner radius (8px) and padding.
 - Hover/focus states use a lighter accent shade.
+
+### Clipboard Formatting
+- Copy buttons must emit ASCII-only coordinate strings that follow the ISO 6709 human interface recommendations for human-readable data.
+- Representation at the human interface (Annex D):
+  - Coordinate values (latitude, longitude, altitude) are delimited by single spaces.
+  - Latitude and longitude are expressed with sexagesimal fractions using degree (°), minute (′), and second (″) symbols without spaces between the numeric value and symbol.
+  - Minutes and seconds include leading zeroes when they are less than ten.
+  - Hemisphere indicators (`N`, `S`, `E`, `W`) follow immediately after the coordinate digits.
+  - DDM coordinates are rendered as `<deg>°<mm.mmmm>′<hemisphere>` (e.g., `58°54.8744′N 22°29.4242′E`).
+  - DMS coordinates are rendered as `<deg>°<mm>′<ss.ss>″<hemisphere>` (e.g., `58°54′52.47″N 22°29′25.45″E`).
+  - Height copies include the unit symbol directly after the value (e.g., `20m`).
+  - Negative elevations use a leading minus sign when copied.
+- The clipboard text must be sanitised to ASCII while preserving the structure above (`°` → `deg`, `′` → `'`, `″` → `"`).
 
 ### Tab Navigation
 - All interactive fields must support **keyboard navigation** with **Tab**.  
