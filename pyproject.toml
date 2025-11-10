@@ -12,7 +12,7 @@ authors = [{ name = "Coordinate Converter Contributors" }]
 dependencies = [
     "flet==0.27.6",
     "flet-webview>=0.1.0",
-    "pyproj==3.7.0",
+    "pyproj>=3.7.2",
     "numpy==1.26.4",
     "mgrs==1.4.5",
 ]
